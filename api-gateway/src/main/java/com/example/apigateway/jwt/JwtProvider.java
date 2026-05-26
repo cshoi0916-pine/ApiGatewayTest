@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 import java.security.Key;
 import java.util.Date;
 
-@Component
+//@Component
 public class JwtProvider {
 
     private static final String SECRET =
