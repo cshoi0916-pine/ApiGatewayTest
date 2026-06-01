@@ -1,8 +1,20 @@
 server:
   port: 8081
 
+spring:
+  application:
+    name: backend-service   # Gateway의 lb://backend-service 와 반드시 일치
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
+
 management:
   endpoints:
     web:
       exposure:
-        include: health
+        include: health, info

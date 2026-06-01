@@ -4,81 +4,50 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.stereotype.Service;
 
-import java.util.concurrent.ConcurrentHashMap;
-
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class ApiMetricsService {
 
     private final MeterRegistry registry;
 
-    private final ConcurrentHashMap<String, Counter> requestCounters =
-            new ConcurrentHashMap<>();
+    private final AtomicLong totalRequests = new AtomicLong(0);
+    private final AtomicLong totalBlocked  = new AtomicLong(0);
 
-    private final ConcurrentHashMap<String, Counter> blockedCounters =
-            new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, AtomicLong> blockedByIp = new ConcurrentHashMap<>();
 
-    private final ConcurrentHashMap<String, Double> requestCounts =
-            new ConcurrentHashMap<>();
-
-    private final ConcurrentHashMap<String, Double> blockedCounts =
-            new ConcurrentHashMap<>();
+    private final Counter requestCounter;
+    private final Counter blockedCounter;
 
     public ApiMetricsService(MeterRegistry registry) {
         this.registry = registry;
+        this.requestCounter = Counter.builder("gateway_requests_total")
+                .description("총 요청 수")
+                .register(registry);
+        this.blockedCounter = Counter.builder("gateway_blocked_total")
+                .description("Rate Limit 차단 수")
+                .register(registry);
     }
 
-    public void increaseRequest(String clientName) {
-
-        Counter counter = requestCounters.computeIfAbsent(
-                clientName,
-                name -> Counter.builder("api_requests_total")
-                        .tag("client", name)
-                        .register(registry)
-        );
-
-        counter.increment();
-
-        requestCounts.merge(clientName, 1.0, Double::sum);
+    public void recordRequest(String ip) {
+        requestCounter.increment();
+        totalRequests.incrementAndGet();
     }
 
-    public void increaseBlocked(String clientName) {
-
-        Counter counter = blockedCounters.computeIfAbsent(
-                clientName,
-                name -> Counter.builder("api_blocked_total")
-                        .tag("client", name)
-                        .register(registry)
-        );
-
-        counter.increment();
-
-        blockedCounts.merge(clientName, 1.0, Double::sum);
+    public void recordBlocked(String ip) {
+        blockedCounter.increment();
+        totalBlocked.incrementAndGet();
+        blockedByIp.computeIfAbsent(ip, k -> new AtomicLong(0)).incrementAndGet();
     }
 
     public Map<String, Object> getStats() {
-
-        Map<String, Object> result = new HashMap<>();
-
-        for (String client : requestCounts.keySet()) {
-
-            Map<String, Object> data = new HashMap<>();
-
-            data.put(
-                    "requests",
-                    requestCounts.getOrDefault(client, 0.0)
-            );
-
-            data.put(
-                    "blocked",
-                    blockedCounts.getOrDefault(client, 0.0)
-            );
-
-            result.put(client, data);
-        }
-
-        return result;
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("totalRequests", totalRequests.get());
+        stats.put("totalBlocked", totalBlocked.get());
+        stats.put("blockedByIp", new HashMap<>(blockedByIp));
+        return stats;
     }
 }
