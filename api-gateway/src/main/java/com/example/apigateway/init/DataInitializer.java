@@ -4,6 +4,7 @@ import com.example.apigateway.apikey.ApiClient;
 import com.example.apigateway.apikey.ApiClientRepository;
 import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 public class DataInitializer {
@@ -15,6 +16,7 @@ public class DataInitializer {
     }
 
     @PostConstruct
+    @Transactional
     public void init() {
 
         if (repository.count() == 0) {

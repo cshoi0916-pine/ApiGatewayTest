@@ -1,5 +1,6 @@
 package com.example.apigateway.admin;
 
+import com.example.apigateway.admin.ApiKeyAdminService;
 import com.example.apigateway.admin.dto.CreateApiKeyRequest;
 import com.example.apigateway.admin.dto.CreateApiKeyResponse;
 import com.example.apigateway.apikey.ApiClient;
@@ -13,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/admin")
+@RequestMapping("/gateway/admin")
 public class AdminController {
 
     private final ApiKeyAdminService service;
@@ -43,13 +44,11 @@ public class AdminController {
         return new CreateApiKeyResponse(apiKey);
     }
 
-    // key 목록조회 API
     @GetMapping("/apikeys")
     public List<ApiClient> getApiKeys() {
         return repository.findAll();
     }
 
-    // key 삭제 API
     @DeleteMapping("/apikey/{id}")
     public ResponseEntity<Map<String, Object>> deleteApiKey(
             @PathVariable Long id
@@ -60,7 +59,6 @@ public class AdminController {
                 .orElse(null);
 
         if (client == null) {
-
             return ResponseEntity
                     .status(HttpStatus.NOT_FOUND)
                     .body(Map.of(
