@@ -1,0 +1,139 @@
+{
+  "info": {
+    "name": "인증서버 직접 테스트",
+    "_postman_id": "auth-server-direct",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "auth_url",      "value": "http://192.168.1.183:10101" },
+    { "key": "token",         "value": "" },
+    { "key": "refresh_token", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. 로그인",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var res = pm.response.json();",
+              "if (res.access_token) {",
+              "    pm.collectionVariables.set('token', res.access_token);",
+              "    console.log('✅ access_token 저장 완료');",
+              "} else {",
+              "    console.log('❌ access_token 없음:', JSON.stringify(res));",
+              "}",
+              "if (res.refresh_token) {",
+              "    pm.collectionVariables.set('refresh_token', res.refresh_token);",
+              "    console.log('✅ refresh_token 저장 완료');",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"test\",\n  \"password\": \"test\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{auth_url}}/api/auth/login",
+          "host": ["{{auth_url}}"],
+          "path": ["api", "auth", "login"]
+        }
+      }
+    },
+    {
+      "name": "2. 토큰 유효성 검증",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{auth_url}}/api/auth/validate",
+          "host": ["{{auth_url}}"],
+          "path": ["api", "auth", "validate"]
+        }
+      }
+    },
+    {
+      "name": "3. 토큰 갱신",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var res = pm.response.json();",
+              "if (res.access_token) {",
+              "    pm.collectionVariables.set('token', res.access_token);",
+              "    console.log('✅ access_token 갱신 완료');",
+              "}",
+              "if (res.refresh_token) {",
+              "    pm.collectionVariables.set('refresh_token', res.refresh_token);",
+              "    console.log('✅ refresh_token 갱신 완료');",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{auth_url}}/api/auth/refresh",
+          "host": ["{{auth_url}}"],
+          "path": ["api", "auth", "refresh"]
+        }
+      }
+    },
+    {
+      "name": "4. 로그아웃",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.collectionVariables.set('token', '');",
+              "pm.collectionVariables.set('refresh_token', '');",
+              "console.log('✅ 토큰 삭제 완료');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type",  "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{auth_url}}/api/auth/logout",
+          "host": ["{{auth_url}}"],
+          "path": ["api", "auth", "logout"]
+        }
+      }
+    }
+  ]
+}

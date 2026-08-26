@@ -1,0 +1,64 @@
+{
+  "groups": [
+    {
+      "name": "pine-gw",
+      "type": "com.pinecni.pinegw.PineGwProperties",
+      "sourceType": "com.pinecni.pinegw.PineGwProperties"
+    },
+    {
+      "name": "pine-gw.route",
+      "type": "com.pinecni.pinegw.PineGwProperties$RouteConfig",
+      "sourceType": "com.pinecni.pinegw.PineGwProperties",
+      "sourceMethod": "getRoute()"
+    }
+  ],
+  "properties": [
+    {
+      "name": "pine-gw.host",
+      "type": "java.lang.String",
+      "sourceType": "com.pinecni.pinegw.PineGwProperties"
+    },
+    {
+      "name": "pine-gw.port",
+      "type": "java.lang.Integer",
+      "sourceType": "com.pinecni.pinegw.PineGwProperties"
+    },
+    {
+      "name": "pine-gw.route.enabled",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.pinecni.pinegw.PineGwProperties$RouteConfig",
+      "defaultValue": true
+    },
+    {
+      "name": "pine-gw.route.method",
+      "type": "java.lang.String",
+      "sourceType": "com.pinecni.pinegw.PineGwProperties$RouteConfig",
+      "defaultValue": "ALL"
+    },
+    {
+      "name": "pine-gw.route.path",
+      "type": "java.lang.String",
+      "sourceType": "com.pinecni.pinegw.PineGwProperties$RouteConfig"
+    },
+    {
+      "name": "pine-gw.route.priority",
+      "type": "java.lang.Integer",
+      "sourceType": "com.pinecni.pinegw.PineGwProperties$RouteConfig",
+      "defaultValue": 0
+    },
+    {
+      "name": "pine-gw.service-id",
+      "type": "java.lang.String",
+      "sourceType": "com.pinecni.pinegw.PineGwProperties"
+    },
+    {
+      "name": "pine-gw.url",
+      "type": "java.lang.String",
+      "sourceType": "com.pinecni.pinegw.PineGwProperties"
+    }
+  ],
+  "hints": [],
+  "ignored": {
+    "properties": []
+  }
+}

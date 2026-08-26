@@ -1,0 +1,2285 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APIGW 콘솔</title>
+<link rel="icon" type="image/png" href="/파인씨앤아이(vertical).png">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',sans-serif; background:#F4F8FC; color:#334155; display:flex; height:100vh; overflow:hidden; }
+
+/* ── 사이드바 ── */
+.sidebar {
+  width:180px; min-width:180px; background:#1E293B; display:flex; flex-direction:column;
+  box-shadow:2px 0 12px rgba(0,0,0,0.2);
+}
+.sidebar-brand {
+  padding:20px 16px 16px; font-size:13px; font-weight:700; color:#0EA5E9; letter-spacing:.5px;
+  border-bottom:1px solid #334155;
+}
+.sidebar-brand small { display:block; color:#64748B; font-size:10px; font-weight:400; margin-top:2px; }
+.nav-group-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:11px 14px; color:#64748B; font-size:11px; font-weight:700;
+  letter-spacing:.4px; user-select:none;
+  border-top:1px solid #273549; border-left:3px solid transparent;
+  transition:all .15s;
+}
+.nav-group:first-of-type .nav-group-header { border-top:none; }
+.nav-group:hover .nav-group-header,
+.nav-group.active-group .nav-group-header { color:#E2E8F0; background:rgba(14,165,233,.08); border-left-color:#0EA5E9; }
+.nav-group-body { display:none; }
+.nav-group:hover .nav-group-body,
+.nav-group.active-group .nav-group-body { display:block; }
+.nav-item {
+  display:block; width:100%; padding:10px 16px 10px 26px; background:none; border:none; text-align:left;
+  font-size:12px; color:#94A3B8; cursor:pointer; transition:all .15s;
+  border-left:3px solid transparent;
+}
+.nav-item:hover { background:#334155; color:#CBD5E1; }
+.nav-item.active { background:#0F172A; color:#FFFFFF; border-left-color:#0EA5E9; font-weight:600; }
+.sidebar-footer { margin-top:auto; padding:12px 16px; font-size:10px; color:#475569; border-top:1px solid #334155; }
+
+/* ── 메인 ── */
+.main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+
+/* 상단 헤더 */
+.topbar {
+  background:#1A3A5C; color:white; padding:12px 24px;
+  display:flex; align-items:center; justify-content:space-between;
+  box-shadow:0 2px 8px rgba(0,0,0,0.15);
+}
+.topbar-title { font-size:16px; font-weight:700; }
+.topbar-right { display:flex; align-items:center; gap:14px; font-size:12px; }
+.status-dot { width:8px; height:8px; border-radius:50%; background:#15803D; display:inline-block; animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:.35} }
+.refresh-btn {
+  background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.25); color:white;
+  padding:5px 12px; border-radius:5px; cursor:pointer; font-size:12px; transition:background .2s;
+}
+.refresh-btn:hover { background:rgba(255,255,255,.25); }
+.user-chip { color:#BAE6FD; font-size:12px; }
+.logout-btn {
+  background:transparent; border:1px solid rgba(255,255,255,.3); color:#CBD5E1;
+  padding:5px 12px; border-radius:5px; cursor:pointer; font-size:12px; transition:all .2s;
+}
+.logout-btn:hover { background:rgba(239,68,68,.25); border-color:#F87171; color:white; }
+
+/* 콘텐츠 영역 */
+.content { flex:1; overflow-y:auto; padding:24px; }
+
+/* 탭 */
+.tab { display:none; }
+.tab.active { display:block; }
+
+/* 페이지 헤더 */
+.page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+.page-title { font-size:18px; font-weight:700; color:#1A3A5C; }
+.page-title small { font-size:12px; color:#64748B; font-weight:400; margin-left:8px; }
+
+/* 카드 */
+.card { background:white; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,.06); margin-bottom:18px; }
+.card-header { padding:16px 20px; border-bottom:1px solid #F0F4F8; display:flex; align-items:center; justify-content:space-between; }
+.card-title { font-size:14px; font-weight:700; color:#1A3A5C; }
+.card-body { padding:0; }
+.page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.page-title { font-size:16px; font-weight:700; color:#1A3A5C; }
+.page-title small { font-size:12px; font-weight:400; color:#64748B; margin-left:6px; }
+.pagination { display:flex; gap:4px; justify-content:center; padding:12px 0 8px; flex-wrap:wrap; }
+.page-btn { min-width:32px; height:32px; padding:0 8px; border:1px solid #E2E8F0; border-radius:6px; background:white; cursor:pointer; font-size:12px; color:#334155; transition:all .15s; }
+.page-btn.active { background:#0EA5E9; color:white; border-color:#0EA5E9; font-weight:600; }
+.page-btn:hover:not(.active):not(:disabled) { background:#F0F4F8; }
+.page-btn:disabled { opacity:0.4; cursor:not-allowed; }
+.spinner { display:inline-block; width:14px; height:14px; border:2px solid #E2E8F0; border-top-color:#0EA5E9; border-radius:50%; animation:spin .6s linear infinite; vertical-align:middle; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.svc-row { cursor:pointer; user-select:none; }
+
+/* 요약 카드 */
+.stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:20px; }
+.stat-card { background:white; border-radius:10px; padding:16px 20px; box-shadow:0 2px 8px rgba(0,0,0,.06); border-left:4px solid; }
+.stat-card:nth-child(1){border-color:#065A82}
+.stat-card:nth-child(2){border-color:#15803D}
+.stat-card:nth-child(3){border-color:#1C7293}
+.stat-card:nth-child(4){border-color:#D97706}
+.stat-label { font-size:11px; color:#64748B; font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
+.stat-value { font-size:30px; font-weight:700; color:#1A3A5C; margin-top:4px; }
+
+/* 테이블 */
+table { width:100%; border-collapse:collapse; }
+thead tr { background:#F1F5F9; }
+thead th { font-size:11px; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:.5px; padding:10px 14px; border-bottom:2px solid #CBD5E1; text-align:left; white-space:nowrap; }
+thead th + th { border-left:1px solid #E2E8F0; }
+tbody td { padding:11px 14px; border-bottom:1px solid #EEF2F7; font-size:13px; vertical-align:middle; }
+tbody td + td { border-left:1px solid #EEF2F7; }
+tbody tr:last-child td { border-bottom:none; }
+tbody tr:hover td { background:#EBF5FD; }
+.empty { text-align:center; padding:32px; color:#94A3B8; font-size:13px; }
+.col-num { width:40px; text-align:center; color:#94A3B8; font-size:12px; font-weight:600; }
+.sort-select { padding:5px 10px; border:1.5px solid #E2E8F0; border-radius:6px; font-size:12px; color:#64748B; cursor:pointer; outline:none; background:white; }
+.svc-search-wrap { position:relative; }
+.svc-dd { position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #CBD5E1; border-radius:6px; max-height:180px; overflow-y:auto; z-index:300; box-shadow:0 4px 12px rgba(0,0,0,.12); margin-top:2px; }
+.svc-dd-item { padding:8px 12px; font-size:13px; cursor:pointer; border-bottom:1px solid #F0F4F8; }
+.svc-dd-item:last-child { border-bottom:none; }
+.svc-dd-item:hover { background:#EBF5FD; }
+.svc-dd-empty { padding:10px 12px; font-size:12px; color:#94A3B8; }
+.sort-select:focus { border-color:#065A82; }
+code { font-family:'Consolas',monospace; font-size:12px; background:#F1F5F9; padding:2px 6px; border-radius:4px; }
+
+/* 배지 */
+.badge { display:inline-block; padding:2px 9px; border-radius:20px; font-size:11px; font-weight:700; }
+.badge-up    { background:#DCFCE7; color:#15803D; }
+.badge-down  { background:#FEE2E2; color:#B91C1C; }
+.badge-check { background:#FEF3C7; color:#D97706; }
+.badge-svc-on  { display:inline-block; padding:2px 9px; border-radius:20px; font-size:11px; font-weight:700; background:#DCFCE7; color:#15803D; }
+.badge-svc-off { display:inline-block; padding:2px 9px; border-radius:20px; font-size:11px; font-weight:700; background:#F1F5F9; color:#94A3B8; }
+.badge-manual{ background:#FEF3C7; color:#92400E; }
+.badge-config{ background:#DBEAFE; color:#1D4ED8; }
+.badge-http   { background:#E0F2FE; color:#0369A1; }
+.badge-https  { background:#F0FDF4; color:#166534; }
+.badge-dynamic { background:#F3E8FF; color:#7C3AED; }
+.badge-static  { background:#F1F5F9; color:#475569; }
+
+/* 버튼 */
+.btn { padding:7px 14px; border-radius:7px; font-size:13px; font-weight:600; cursor:pointer; border:none; transition:all .15s; }
+.btn-primary { background:#065A82; color:white; }
+.btn-primary:hover { background:#1A3A5C; }
+.btn-success { background:#15803D; color:white; }
+.btn-success:hover { background:#166534; }
+.btn-warning { background:#FEF3C7; color:#B45309; border:1.5px solid #FDE68A; }
+.btn-warning:hover { background:#FDE68A; }
+.btn-danger  { background:#FEE2E2; color:#B91C1C; }
+.btn-danger:hover  { background:#FECACA; }
+.btn-secondary { background:#F1F5F9; color:#64748B; }
+.btn-secondary:hover { background:#E2E8F0; }
+.btn-sm { padding:4px 9px; font-size:11px; border-radius:5px; }
+.btn-icon { background:none; border:none; cursor:pointer; padding:4px; border-radius:4px; transition:background .15s; }
+.btn-icon:hover { background:#F1F5F9; }
+
+/* 모달 */
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:200; align-items:center; justify-content:center; }
+.modal-overlay.active { display:flex; }
+.modal { background:white; border-radius:12px; padding:28px; width:520px; max-width:95vw; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.2); }
+.modal-lg { width:680px; }
+.modal-xl { width:900px; }
+.inst-card-row { display:flex; align-items:center; border:1px solid #E2E8F0; border-radius:8px; background:white; border-left:3px solid #15803D; overflow:hidden; }
+.inst-card-row.down { border-left-color:#B91C1C; }
+.inst-card-row.checking { border-left-color:#D97706; }
+.inst-card-row.disabled { border-left-color:#CBD5E1; opacity:.75; }
+.inst-col { padding:10px 14px; }
+.inst-col + .inst-col { border-left:1px solid #E2E8F0; }
+.inst-col-num { flex:0 0 36px; text-align:center; font-size:11px; font-weight:700; color:#94A3B8; }
+.inst-col-addr { flex:0 0 180px; display:flex; align-items:center; gap:8px; }
+.inst-col-badges { flex:0 0 auto; display:flex; gap:4px; align-items:center; }
+.inst-col-time { flex:1; font-size:11px; color:#94A3B8; white-space:nowrap; }
+.inst-col-actions { flex:0 0 auto; display:flex; gap:5px; align-items:center; }
+.modal h3 { font-size:17px; font-weight:700; color:#1A3A5C; margin-bottom:22px; }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.form-group { margin-bottom:14px; }
+.form-group label { display:block; font-size:11px; font-weight:700; color:#64748B; text-transform:uppercase; letter-spacing:.5px; margin-bottom:5px; }
+.form-group input, .form-group select, .form-group textarea {
+  width:100%; padding:9px 12px; border:1.5px solid #E2E8F0; border-radius:7px; font-size:13px;
+  outline:none; transition:border-color .2s; font-family:inherit;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color:#065A82; }
+.form-group textarea { resize:vertical; min-height:70px; }
+.form-hint { font-size:11px; color:#94A3B8; margin-top:3px; }
+.toggle-wrap { display:flex; align-items:center; gap:8px; margin-top:2px; }
+.toggle { position:relative; display:inline-block; width:40px; height:22px; }
+.toggle input { opacity:0; width:0; height:0; }
+.toggle-slider { position:absolute; inset:0; background:#CBD5E1; border-radius:22px; cursor:pointer; transition:.2s; }
+.toggle-slider:before { content:''; position:absolute; width:16px; height:16px; left:3px; top:3px; background:white; border-radius:50%; transition:.2s; }
+.toggle input:checked + .toggle-slider { background:#065A82; }
+.toggle input:checked + .toggle-slider:before { transform:translateX(18px); }
+/* 테이블 인라인 토글 (텍스트 포함, 더 넓음) */
+.toggle.toggle-table { width:58px; height:24px; }
+.toggle-table .toggle-slider { background:#EF4444; }
+.toggle-table .toggle-slider:after { content:'OFF'; position:absolute; right:7px; top:50%; transform:translateY(-50%); font-size:9px; font-weight:700; color:rgba(255,255,255,.85); pointer-events:none; }
+.toggle-table input:checked + .toggle-slider { background:#16A34A; }
+.toggle-table input:checked + .toggle-slider:after { content:'ON'; right:auto; left:7px; }
+.toggle-table input:checked + .toggle-slider:before { transform:translateX(34px); }
+.modal-footer { display:flex; gap:10px; justify-content:flex-end; margin-top:20px; padding-top:16px; border-top:1px solid #F0F4F8; }
+
+/* 조건 테이블 */
+.condition-section { margin-top:16px; padding-top:14px; border-top:1px solid #F0F4F8; }
+.condition-section h4 { font-size:12px; font-weight:700; color:#334155; text-transform:uppercase; letter-spacing:.5px; margin-bottom:10px; }
+.condition-row { display:grid; grid-template-columns:1fr 1fr 1fr 1fr auto; gap:8px; align-items:center; margin-bottom:8px; }
+.condition-row input, .condition-row select { padding:7px 10px; border:1.5px solid #E2E8F0; border-radius:6px; font-size:12px; outline:none; }
+
+/* 서킷브레이커 */
+.cb-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+.cb-card { background:white; border-radius:10px; padding:18px; box-shadow:0 2px 8px rgba(0,0,0,.06); border-top:4px solid; }
+.cb-card.closed  { border-color:#15803D; }
+.cb-card.open    { border-color:#B91C1C; }
+.cb-card.half    { border-color:#D97706; }
+.cb-name { font-size:13px; font-weight:700; color:#1A3A5C; display:flex; align-items:center; gap:8px; }
+.cb-forced-badge { font-size:10px; font-weight:700; background:#7C3AED; color:white; padding:2px 7px; border-radius:4px; letter-spacing:.3px; }
+.cb-state { font-size:11px; font-weight:700; margin:6px 0 10px; }
+.cb-state.closed { color:#15803D; }
+.cb-state.open   { color:#B91C1C; }
+.cb-state.half   { color:#D97706; }
+.cb-metric { font-size:11px; color:#64748B; margin-top:4px; }
+.cb-metric span { font-weight:700; color:#334155; }
+.cb-btn-group { display:flex; margin-top:14px; border-radius:7px; overflow:hidden; border:1.5px solid #E2E8F0; }
+.cb-seg { flex:1; padding:7px 0; font-size:11px; font-weight:700; border:none; cursor:pointer; transition:all .15s; background:#F8FAFC; color:#94A3B8; }
+.cb-seg + .cb-seg { border-left:1.5px solid #E2E8F0; }
+.cb-seg.sel-danger  { background:#B91C1C; color:white; cursor:default; }
+.cb-seg.sel-success { background:#15803D; color:white; cursor:default; }
+.cb-seg.idle:hover  { background:#F1F5F9; color:#475569; }
+
+/* 인스턴스 서브 영역 */
+.svc-row-body { cursor:pointer; }
+.svc-row-body:hover td { background:#F1F5F9; }
+.inst-section { background:#F8FAFC; border-top:1px solid #E2E8F0; }
+.inst-section-header { display:flex; align-items:center; justify-content:space-between; padding:8px 16px 8px 32px; border-bottom:1px solid #EEF2F7; }
+.inst-section-label { font-size:11px; font-weight:600; color:#64748B; text-transform:uppercase; letter-spacing:.4px; }
+.kebab-wrap { position:relative; display:inline-block; }
+.kebab-btn { width:28px; height:28px; border-radius:6px; border:1px solid #E2E8F0; background:white; color:#64748B; font-size:18px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.kebab-btn:hover { background:#F1F5F9; }
+.kebab-dd { position:absolute; right:0; top:32px; background:white; border:1px solid #E2E8F0; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,.1); z-index:300; min-width:110px; padding:4px; }
+.kebab-dd-item { padding:7px 12px; font-size:12px; color:#334155; cursor:pointer; border-radius:5px; white-space:nowrap; }
+.kebab-dd-item:hover { background:#F1F5F9; }
+.kebab-dd-del { color:#DC2626; }
+.kebab-dd-del:hover { background:#FEF2F2; }
+.inst-cards { padding:8px 16px 10px 32px; display:flex; flex-direction:column; gap:6px; }
+.inst-card { display:flex; align-items:center; gap:10px; background:white; border:1px solid #E2E8F0; border-radius:8px; padding:8px 12px; border-left:3px solid #15803D; }
+.inst-card.down { border-left-color:#B91C1C; }
+.inst-card.checking { border-left-color:#D97706; }
+.inst-card.disabled { border-left-color:#CBD5E1; opacity:.75; }
+.inst-card-addr { flex:0 0 auto; min-width:140px; display:flex; align-items:center; gap:6px; }
+.inst-card-badges { display:flex; gap:4px; flex:0 0 auto; }
+.inst-card-time { font-size:11px; color:#94A3B8; flex:1; }
+.inst-card-actions { display:flex; gap:5px; align-items:center; flex:0 0 auto; }
+.inst-empty { padding:14px 32px; font-size:12px; color:#94A3B8; }
+
+/* Stats Bar (공통 고정) */
+.stats-bar { background:white; border-bottom:1px solid #E2E8F0; display:flex; flex-shrink:0; }
+.stats-bar-item { flex:1; padding:10px 20px; border-left:4px solid transparent; border-right:1px solid #F0F4F8; }
+.stats-bar-item:last-child { border-right:none; }
+.stats-bar-label { font-size:10px; color:#64748B; font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
+.stats-bar-value { font-size:22px; font-weight:700; color:#1A3A5C; margin-top:2px; }
+
+/* 서브탭 */
+.sub-tabs { display:flex; border-bottom:2px solid #E2E8F0; margin-bottom:20px; }
+.sub-tab-btn { padding:9px 16px; font-size:13px; font-weight:600; color:#64748B; cursor:pointer; border:none; background:none; border-bottom:2px solid transparent; margin-bottom:-2px; transition:all .15s; }
+.sub-tab-btn.active { color:#065A82; border-bottom-color:#065A82; }
+.sub-tab-btn:hover:not(.active) { color:#334155; }
+.sub-pane { display:none; }
+.sub-pane.active { display:block; }
+
+/* 라우팅 미리보기 */
+.route-preview { background:#F8FAFC; border:1px solid #E2E8F0; border-radius:7px; padding:10px 14px; margin-top:6px; display:none; }
+.route-preview-label { font-size:10px; font-weight:700; color:#64748B; text-transform:uppercase; letter-spacing:.4px; margin-bottom:7px; }
+.route-preview-row { display:flex; align-items:center; gap:8px; padding:2px 0; flex-wrap:wrap; }
+.route-preview-row code { font-size:11px; white-space:nowrap; }
+.rp-gw { background:#EFF6FF; color:#1E40AF; }
+.rp-bk { background:#F0FDF4; color:#166534; }
+
+/* 모달 인라인 에러 */
+.form-error { background:#FEE2E2; border:1px solid #FECACA; border-radius:6px; padding:10px 14px; font-size:12px; color:#B91C1C; margin-top:4px; margin-bottom:2px; }
+input.field-error, select.field-error { border-color:#B91C1C !important; }
+
+/* Toast */
+.toast { position:fixed; bottom:24px; right:24px; background:#1A3A5C; color:white; padding:11px 18px; border-radius:8px; font-size:13px; font-weight:500; box-shadow:0 4px 20px rgba(0,0,0,.2); transform:translateY(80px); opacity:0; transition:all .25s; z-index:300; }
+.toast.show { transform:translateY(0); opacity:1; }
+.toast.success { border-left:4px solid #15803D; }
+.toast.error   { border-left:4px solid #B91C1C; }
+</style>
+</head>
+<body>
+
+<!-- 사이드바 -->
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <img src="/파인씨앤아이(vertical).png" alt="PINE C&I"
+         style="width:130px;display:block;margin-bottom:10px;filter:brightness(0) invert(1);opacity:.9;">
+    <small id="gw-name-env" style="color:#38BDF8"></small>
+    <small id="gw-uptime" style="color:#475569;font-size:10px;display:block;margin-top:2px"></small>
+  </div>
+  <nav style="padding-top:4px">
+    <!-- 설정 그룹 -->
+    <div class="nav-group active-group" id="grp-config">
+      <div class="nav-group-header"><span>설정</span></div>
+      <div class="nav-group-body">
+        <button class="nav-item active" id="nav-services" onclick="showTab('services')">서비스</button>
+        <button class="nav-item" id="nav-routes" onclick="showTab('routes')">라우팅 룰</button>
+      </div>
+    </div>
+    <!-- 모니터링 그룹 -->
+    <div class="nav-group" id="grp-monitor">
+      <div class="nav-group-header"><span>모니터링</span></div>
+      <div class="nav-group-body">
+        <button class="nav-item" id="nav-logs" onclick="showTab('logs')">이력</button>
+        <button class="nav-item" id="nav-circuit" onclick="showTab('circuit')">서킷브레이크</button>
+        <button class="nav-item" id="nav-circuit-events" onclick="showTab('circuit-events')">서킷 이벤트</button>
+        <button class="nav-item" id="nav-ratelimit" onclick="showTab('ratelimit')">Rate Limit 현황</button>
+      </div>
+    </div>
+    <!-- 보안 그룹 -->
+    <div class="nav-group" id="grp-security">
+      <div class="nav-group-header"><span>보안</span></div>
+      <div class="nav-group-body">
+        <button class="nav-item" id="nav-apikeys" onclick="showTab('apikeys')">API 키</button>
+        <button class="nav-item" id="nav-security" onclick="showTab('security')">IP 블랙리스트</button>
+        <button class="nav-item" id="nav-brute" onclick="showTab('brute')">브루트포스</button>
+      </div>
+    </div>
+  </nav>
+</aside>
+
+<!-- 메인 -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-title">API Gateway 관리 콘솔</div>
+    <div class="topbar-right">
+      <span class="status-dot"></span>
+      <span id="lastUpdate" style="color:#A8D8EA">연결 중...</span>
+      <span class="user-chip" id="topbar-username"></span>
+      <button class="refresh-btn" onclick="loadAll()">↻ 새로고침</button>
+      <button class="logout-btn" onclick="logout()">로그아웃</button>
+    </div>
+  </div>
+
+  <!-- 공통 Stats 바 -->
+  <div class="stats-bar">
+    <div class="stats-bar-item" style="border-left-color:#065A82">
+      <div class="stats-bar-label">전체 서비스</div>
+      <div class="stats-bar-value" id="stat-svc-total">—</div>
+    </div>
+    <div class="stats-bar-item" style="border-left-color:#0EA5E9">
+      <div class="stats-bar-label">활성 서비스</div>
+      <div class="stats-bar-value" id="stat-svc-active">—</div>
+    </div>
+    <div class="stats-bar-item" style="border-left-color:#15803D">
+      <div class="stats-bar-label">UP 인스턴스</div>
+      <div class="stats-bar-value" id="stat-up">—</div>
+    </div>
+    <div class="stats-bar-item" style="border-left-color:#B91C1C">
+      <div class="stats-bar-label">DOWN 인스턴스</div>
+      <div class="stats-bar-value" id="stat-down">—</div>
+    </div>
+    <div class="stats-bar-item" style="border-left-color:#92400E">
+      <div class="stats-bar-label">전체 라우팅 룰</div>
+      <div class="stats-bar-value" id="stat-route-total">—</div>
+    </div>
+    <div class="stats-bar-item" style="border-left-color:#D97706">
+      <div class="stats-bar-label">활성 라우팅 룰</div>
+      <div class="stats-bar-value" id="stat-route-active">—</div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ── 서비스 탭 ── -->
+    <div id="tab-services" class="tab active">
+      <div class="page-header">
+        <div class="page-title">등록된 서비스 <small>Custom Registry</small></div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <select class="sort-select" id="svc-sort-select" onchange="svcSort=this.value;renderServicePage(0)">
+            <option value="newest">최신순</option>
+            <option value="oldest">오래된순</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="openServiceModal()">+ 서비스 추가</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body">
+          <table>
+            <thead><tr>
+              <th class="col-num">번호</th>
+              <th style="width:80px">상태</th><th>서비스 ID</th><th>서비스명</th><th>인스턴스</th><th>설명</th><th>관리</th>
+            </tr></thead>
+            <tbody id="services-body"><tr><td colspan="7" class="empty">로딩 중...</td></tr></tbody>
+          </table>
+        </div>
+        <div id="svc-pagination" class="pagination"></div>
+      </div>
+    </div>
+
+    <!-- ── 라우팅 룰 탭 ── -->
+    <div id="tab-routes" class="tab">
+      <div class="page-header">
+        <div class="page-title">라우팅 룰 <small>실시간 추가/수정/삭제</small></div>
+        <button class="btn btn-primary btn-sm" onclick="openRouteModal()">+ 라우팅 룰 추가</button>
+      </div>
+      <div class="card">
+        <div class="card-body">
+          <table>
+            <thead><tr>
+              <th class="col-num">번호</th>
+              <th style="width:80px">상태</th><th>라우팅 ID</th><th>라우팅명</th><th>대상 서비스 ID</th><th>API 경로</th>
+              <th>메소드</th><th>순위</th><th>타입</th><th>관리</th>
+            </tr></thead>
+            <tbody id="routes-body"><tr><td colspan="10" class="empty">로딩 중...</td></tr></tbody>
+          </table>
+        </div>
+        <div id="route-pagination" class="pagination"></div>
+      </div>
+    </div>
+
+    <!-- ── 이력 탭 ── -->
+    <div id="tab-logs" class="tab">
+      <div class="page-header">
+        <div class="page-title">이력 <small>요청 및 접속 이력</small></div>
+        <span style="font-size:11px;color:#94A3B8">⟳ API 이력 10초마다 자동 갱신</span>
+      </div>
+      <div class="sub-tabs">
+        <button class="sub-tab-btn active" onclick="showSubTab('api-logs', this)">API 요청 이력</button>
+        <button class="sub-tab-btn" onclick="showSubTab('access-logs', this)">접속 이력</button>
+        <button class="sub-tab-btn" onclick="showSubTab('gw-lifecycle', this)">게이트웨이 이력</button>
+      </div>
+
+      <!-- API 요청 이력 -->
+      <div id="sub-api-logs" class="sub-pane active">
+        <div class="card" style="margin-bottom:14px; padding:14px 20px; display:flex; gap:10px; align-items:center;">
+          <span style="font-size:12px;color:#64748B">총 요청</span>
+          <span id="log-total" style="font-size:22px;font-weight:700;color:#1A3A5C">—</span>
+          <span style="font-size:12px;color:#64748B;margin-left:16px">차단</span>
+          <span id="log-blocked" style="font-size:22px;font-weight:700;color:#B91C1C">—</span>
+          <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+            <span style="font-size:11px;color:#64748B">서비스 필터</span>
+            <select id="log-filter-svc" style="padding:6px 10px;border:1.5px solid #E2E8F0;border-radius:6px;font-size:12px;" onchange="loadRequestLogs(0)">
+              <option value="">전체</option>
+            </select>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-body">
+            <table>
+              <thead><tr><th>시각</th><th>메소드</th><th>경로</th><th>서비스</th><th>백엔드 인스턴스</th><th>상태코드</th><th>응답시간</th><th>클라이언트 IP</th></tr></thead>
+              <tbody id="api-logs-body"><tr><td colspan="8" class="empty">로딩 중...</td></tr></tbody>
+            </table>
+          </div>
+          <div id="log-pagination" class="pagination"></div>
+        </div>
+      </div>
+
+      <!-- 접속 이력 -->
+      <div id="sub-access-logs" class="sub-pane">
+        <div class="card">
+          <div class="card-body">
+            <table>
+              <thead><tr><th>시각</th><th>사용자 ID</th><th>클라이언트 IP</th><th>결과</th></tr></thead>
+              <tbody id="access-logs-body"><tr><td colspan="4" class="empty">이력이 없습니다</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 게이트웨이 이력 -->
+      <div id="sub-gw-lifecycle" class="sub-pane">
+        <div class="card">
+          <div class="card-body">
+            <table>
+              <thead><tr><th>시각</th><th>이벤트</th><th>노드명</th></tr></thead>
+              <tbody id="gw-lifecycle-body"><tr><td colspan="3" class="empty">로딩 중...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 서킷브레이크 탭 ── -->
+    <div id="tab-circuit" class="tab">
+      <div class="page-header">
+        <div class="page-title">서킷브레이크</div>
+      </div>
+      <!-- 서비스별 요청 통계 차트 -->
+      <div class="card" style="margin-bottom:18px">
+        <div class="card-header">
+          <span class="card-title">서비스별 요청 통계</span>
+          <span style="font-size:11px;color:#94A3B8">request_log 전체 기준</span>
+        </div>
+        <div class="card-body" style="padding:16px 20px">
+          <canvas id="svc-stats-chart" height="100"></canvas>
+        </div>
+      </div>
+      <!-- 서킷브레이커 상태 -->
+      <div class="page-header" style="margin-bottom:12px">
+        <span style="font-size:13px;font-weight:700;color:#1A3A5C">서킷브레이커 상태</span>
+        <button class="btn btn-secondary btn-sm" onclick="loadCircuitBreaker()">↻ 새로고침</button>
+      </div>
+      <div class="cb-grid" id="cb-grid">
+        <div class="empty">로딩 중...</div>
+      </div>
+    </div>
+
+    <!-- ── API 키 탭 ── -->
+    <div id="tab-apikeys" class="tab">
+      <div class="page-header">
+        <div class="page-title">API 키 관리</div>
+        <button class="btn btn-primary" onclick="openApiKeyModal()">+ API 키 발급</button>
+      </div>
+      <div class="card">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th class="col-num">#</th>
+              <th>클라이언트명</th>
+              <th>API 키</th>
+              <th>생성일</th>
+              <th>만료일</th>
+              <th>상태</th>
+              <th>관리</th>
+            </tr>
+          </thead>
+          <tbody id="apikeys-body">
+            <tr><td colspan="7" class="empty">API 키 탭을 선택하면 로드됩니다</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── 보안 탭 ── -->
+    <div id="tab-security" class="tab">
+      <div class="page-header">
+        <div class="page-title">IP 블랙리스트 <small>등록 즉시 적용</small></div>
+      </div>
+      <!-- 추가 폼 -->
+      <div class="card" style="margin-bottom:18px">
+        <div class="card-header"><span class="card-title">IP 등록</span></div>
+        <div class="card-body" style="padding:16px 20px">
+          <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+            <div class="form-group" style="margin:0;flex:0 0 200px">
+              <label>IP 주소 *</label>
+              <input id="bl-ip" placeholder="예: 192.168.1.100" style="width:100%">
+            </div>
+            <div class="form-group" style="margin:0;flex:1;min-width:200px">
+              <label>사유</label>
+              <input id="bl-reason" placeholder="차단 사유 (선택)" style="width:100%">
+            </div>
+            <button class="btn btn-danger" style="height:38px" onclick="addBlacklist()">차단 등록</button>
+          </div>
+        </div>
+      </div>
+      <!-- 목록 -->
+      <div class="card">
+        <div class="card-body">
+          <table>
+            <thead><tr>
+              <th class="col-num">#</th>
+              <th>IP 주소</th>
+              <th>사유</th>
+              <th>등록일</th>
+              <th>자동 해제일시</th>
+              <th>관리</th>
+            </tr></thead>
+            <tbody id="blacklist-body">
+              <tr><td colspan="6" class="empty">로딩 중...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 서킷 이벤트 탭 ── -->
+    <div id="tab-circuit-events" class="tab">
+      <div class="page-header">
+        <div class="page-title">서킷브레이커 이벤트 <small>최근 200건</small></div>
+        <div class="page-actions">
+          <button class="btn btn-secondary" onclick="loadCircuitEvents()">새로고침</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>서비스 ID</th>
+              <th>이벤트</th>
+              <th>상세</th>
+              <th>발생 시각</th>
+            </tr></thead>
+            <tbody id="circuit-events-body">
+              <tr><td colspan="4" class="empty">로딩 중...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Rate Limit 현황 탭 ── -->
+    <div id="tab-ratelimit" class="tab">
+      <div class="page-header">
+        <div class="page-title">Rate Limit 현황 <small>현재 분 IP별 요청 수</small></div>
+        <div class="page-actions">
+          <button class="btn btn-secondary" onclick="loadRateLimitStatus()">새로고침</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>IP</th>
+              <th>요청 수</th>
+              <th>윈도우 만료까지</th>
+            </tr></thead>
+            <tbody id="ratelimit-body">
+              <tr><td colspan="3" class="empty">로딩 중...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 브루트포스 탭 ── -->
+    <div id="tab-brute" class="tab">
+      <div class="page-header">
+        <div class="page-title">브루트포스 현황 <small>로그인 실패 누적 IP</small></div>
+        <div class="page-actions">
+          <button class="btn btn-secondary" onclick="loadBruteForce()">새로고침</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>IP</th>
+              <th>실패 횟수</th>
+              <th>카운터 만료까지</th>
+              <th>관리</th>
+            </tr></thead>
+            <tbody id="brute-body">
+              <tr><td colspan="4" class="empty">로딩 중...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- 서비스 추가/수정 모달 -->
+<div class="modal-overlay" id="service-modal">
+  <div class="modal">
+    <h3 id="service-modal-title">서비스 추가</h3>
+    <input type="hidden" id="svc-edit-id">
+    <div class="form-row">
+      <div class="form-group">
+        <label>서비스 ID *</label>
+        <input id="svc-id" placeholder="예: order-service">
+        <div class="form-hint">영문·숫자·하이픈, 로드밸런싱 키로 사용됨</div>
+      </div>
+      <div class="form-group">
+        <label>서비스명</label>
+        <input id="svc-name" placeholder="예: 주문 서비스">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>설명</label>
+      <textarea id="svc-desc" placeholder="서비스 설명"></textarea>
+    </div>
+    <div class="form-group">
+      <label>사용여부</label>
+      <div class="toggle-wrap">
+        <label class="toggle"><input type="checkbox" id="svc-enabled" checked><span class="toggle-slider"></span></label>
+        <span style="font-size:13px">사용</span>
+      </div>
+    </div>
+    <div id="service-error" class="form-error" style="display:none"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('service-modal')">취소</button>
+      <button class="btn btn-primary" onclick="submitService()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 인스턴스 추가/수정 모달 -->
+<div class="modal-overlay" id="instance-modal">
+  <div class="modal">
+    <h3 id="inst-modal-title">인스턴스 추가</h3>
+    <input type="hidden" id="inst-edit-id">
+    <input type="hidden" id="inst-service-id">
+    <div class="form-row">
+      <div class="form-group">
+        <label>호스트 *</label>
+        <input id="inst-host" placeholder="예: 192.168.1.10">
+      </div>
+      <div class="form-group">
+        <label>포트 *</label>
+        <input id="inst-port" type="number" placeholder="예: 8081">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>프로토콜</label>
+      <select id="inst-protocol">
+        <option value="HTTP">HTTP</option>
+        <option value="HTTPS">HTTPS</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>사용여부</label>
+      <div class="toggle-wrap">
+        <label class="toggle"><input type="checkbox" id="inst-enabled" checked><span class="toggle-slider"></span></label>
+        <span style="font-size:13px">사용</span>
+      </div>
+    </div>
+    <div id="instance-error" class="form-error" style="display:none"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('instance-modal')">취소</button>
+      <button class="btn btn-primary" onclick="submitInstance()">저장</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- 인스턴스 목록 팝업 -->
+<div class="modal-overlay" id="inst-list-modal">
+  <div class="modal modal-xl">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <h3 id="inst-list-title" style="margin:0">인스턴스 목록</h3>
+      <button class="btn btn-primary btn-sm" id="inst-list-add-btn">+ 인스턴스 추가</button>
+    </div>
+    <div id="inst-list-body"></div>
+    <div class="modal-footer" style="margin-top:16px">
+      <button class="btn btn-secondary" onclick="closeModal('inst-list-modal')">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 라우팅 룰 목록 모달 (서비스별) -->
+<div class="modal-overlay" id="route-list-modal">
+  <div class="modal modal-xl">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <h3 id="route-list-title" style="margin:0">라우팅 룰 목록</h3>
+      <button class="btn btn-primary btn-sm" id="route-list-add-btn">+ 라우팅 룰 추가</button>
+    </div>
+    <div id="route-list-body"></div>
+    <div class="modal-footer" style="margin-top:16px">
+      <button class="btn btn-secondary" onclick="closeModal('route-list-modal')">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 라우팅 룰 추가/수정 모달 -->
+<div class="modal-overlay" id="route-modal">
+  <div class="modal modal-lg">
+    <h3 id="route-modal-title">라우팅 룰 추가</h3>
+    <input type="hidden" id="route-edit-id">
+    <div class="form-row">
+      <div class="form-group">
+        <label>아이디 *</label>
+        <input id="route-id" placeholder="예: data-route">
+      </div>
+      <div class="form-group">
+        <label>명칭</label>
+        <input id="route-name" placeholder="예: 데이터 API 라우트">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>대상 서비스 *</label>
+        <div class="svc-search-wrap">
+          <input id="route-service-search" placeholder="서비스 검색..." autocomplete="off"
+                 oninput="filterSvcDropdown()" onfocus="showSvcDropdown()" onblur="hideSvcDropdownLater()">
+          <input type="hidden" id="route-service">
+          <div id="route-service-dd" class="svc-dd" style="display:none"></div>
+        </div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>API 경로 *</label>
+        <input id="route-path" placeholder="예: /api/data/**" oninput="checkRouteConflicts();updateRoutePreview()">
+        <div class="form-hint">* = 단일 경로, ** = 하위 경로 포함</div>
+      </div>
+      <div class="form-group">
+        <label>메소드</label>
+        <select id="route-method" onchange="checkRouteConflicts()">
+          <option value="ALL">ALL</option>
+          <option value="GET">GET</option>
+          <option value="POST">POST</option>
+          <option value="PUT">PUT</option>
+          <option value="DELETE">DELETE</option>
+          <option value="PATCH">PATCH</option>
+        </select>
+      </div>
+    </div>
+    <div id="route-preview" class="route-preview">
+      <div class="route-preview-label">라우팅 예시</div>
+      <div id="route-preview-rows"></div>
+    </div>
+    <div id="route-conflict-warn" style="display:none;background:#FEF3C7;border:1px solid #FCD34D;border-radius:6px;padding:10px 14px;font-size:12px;color:#92400E;margin-bottom:14px;line-height:1.8"></div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>순위</label>
+        <input id="route-priority" type="number" placeholder="0" value="0">
+        <div class="form-hint">숫자가 작을수록 높은 우선순위</div>
+      </div>
+      <div class="form-group">
+        <label>StripPrefix</label>
+        <input id="route-strip-prefix" type="number" placeholder="자동 계산" min="0">
+        <div class="form-hint">비워두면 경로 세그먼트 수 자동 계산 (0 입력 시 경로 그대로 전달)</div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>타임아웃 (ms)</label>
+        <input id="route-timeout-ms" type="number" placeholder="전역 설정 사용 (기본 5000ms)" min="100">
+        <div class="form-hint">응답 제한 시간. 비워두면 전역값(5초) 사용</div>
+      </div>
+      <div class="form-group">
+        <label>재시도 횟수</label>
+        <input id="route-retry-count" type="number" placeholder="0 (없음)" min="0" max="5">
+        <div class="form-hint">실패 시 재시도 횟수 (GET/HEAD만 해당). 0 또는 비워두면 재시도 없음</div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>사용여부</label>
+        <div class="toggle-wrap" style="margin-top:8px">
+          <label class="toggle"><input type="checkbox" id="route-enabled" checked><span class="toggle-slider"></span></label>
+          <span style="font-size:13px">사용</span>
+        </div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>설명</label>
+      <input id="route-desc" placeholder="라우트 설명">
+    </div>
+
+    <!-- 라우팅 상세 조건 -->
+    <div class="condition-section">
+      <h4>라우팅 상세 조건</h4>
+      <div id="conditions-wrap"></div>
+      <button class="btn btn-secondary btn-sm" onclick="addConditionRow()" style="margin-top:6px">+ 조건 추가</button>
+    </div>
+
+    <div id="route-error" class="form-error" style="display:none"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('route-modal')">취소</button>
+      <button class="btn btn-primary" onclick="submitRoute()">저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal" style="width:360px">
+    <h3 id="confirm-title" style="color:#B91C1C">삭제 확인</h3>
+    <p id="confirm-message" style="font-size:13px;color:#64748B;margin-top:-10px;margin-bottom:4px"></p>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('confirm-modal')">취소</button>
+      <button class="btn btn-danger" id="confirm-ok-btn">삭제</button>
+    </div>
+  </div>
+</div>
+
+<!-- 만료일 설정 모달 -->
+<div class="modal-overlay" id="expiry-modal">
+  <div class="modal" style="width:360px">
+    <h3>만료일 설정</h3>
+    <div class="form-group">
+      <label>만료일시</label>
+      <input type="datetime-local" id="expiry-input" style="width:100%">
+      <div class="form-hint">비워두면 만료일이 제거됩니다</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('expiry-modal')">취소</button>
+      <button class="btn btn-primary" onclick="submitSetExpiry()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- API 키 발급 모달 -->
+<div class="modal-overlay" id="apikey-modal">
+  <div class="modal" style="width:440px">
+    <h3 id="apikey-modal-title">API 키 발급</h3>
+    <div id="apikey-form-step">
+      <div class="form-group">
+        <label>클라이언트명 *</label>
+        <input id="apikey-client-name" placeholder="예: mobile-app, third-party-service" onkeydown="if(event.key==='Enter')issueApiKey()">
+      </div>
+      <div class="form-group">
+        <label>만료일 (선택)</label>
+        <input type="datetime-local" id="apikey-expired-at">
+        <div class="form-hint">비워두면 만료 없음</div>
+      </div>
+      <div id="apikey-error" style="display:none;color:#B91C1C;font-size:13px;margin-top:4px"></div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('apikey-modal')">취소</button>
+        <button class="btn btn-primary" onclick="issueApiKey()">발급</button>
+      </div>
+    </div>
+    <div id="apikey-result-step" style="display:none">
+      <p style="font-size:13px;color:#64748B;margin-bottom:12px">⚠️ 아래 API 키는 지금만 표시됩니다. 반드시 복사해두세요.</p>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+        <code id="apikey-result-value" style="flex:1;background:#F1F5F9;padding:10px 12px;border-radius:6px;font-size:12px;word-break:break-all;border:1px solid #E2E8F0"></code>
+        <button class="btn btn-secondary" onclick="copyApiKey()" style="white-space:nowrap" id="apikey-copy-btn">복사</button>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="closeModal('apikey-modal');loadApiKeys()">확인</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+// 로그인 체크 — 토큰 없으면 로그인 페이지로
+(function() {
+  let token = localStorage.getItem('token');
+  if (!token) { location.replace('/login.html'); return; }
+  const username = localStorage.getItem('username') || '사용자';
+  document.getElementById('topbar-username').textContent = '👤 ' + username;
+})();
+
+const API = '/console/api';
+let currentTab = 'services';
+let allServices = [];
+let allRoutes   = [];
+let svcPage     = 0;
+let currentInstServiceId = '';
+let currentRouteServiceId = '';
+let routePage   = 0;
+let svcSort     = 'newest';
+let logPage     = 0;
+const PAGE_SIZE     = 10;
+const LOG_PAGE_SIZE = 20;
+
+function renderPagination(containerId, totalPages, currentPage, callbackName) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  if (totalPages <= 1) { container.innerHTML = ''; return; }
+  const pages = new Set([0, totalPages - 1]);
+  for (let i = Math.max(0, currentPage - 2); i <= Math.min(totalPages - 1, currentPage + 2); i++) pages.add(i);
+  const sorted = [...pages].sort((a, b) => a - b);
+  let html = `<button class="page-btn" ${currentPage === 0 ? 'disabled' : ''} onclick="${callbackName}(${currentPage - 1})">‹</button>`;
+  let prev = -1;
+  for (const p of sorted) {
+    if (prev !== -1 && p - prev > 1) html += `<span style="padding:0 6px;color:#94A3B8;line-height:32px">…</span>`;
+    html += `<button class="page-btn ${p === currentPage ? 'active' : ''}" onclick="${callbackName}(${p})">${p + 1}</button>`;
+    prev = p;
+  }
+  html += `<button class="page-btn" ${currentPage === totalPages - 1 ? 'disabled' : ''} onclick="${callbackName}(${currentPage + 1})">›</button>`;
+  container.innerHTML = html;
+}
+
+// ── 탭 전환 ──────────────────────────────────────────────
+const TAB_GROUP = {
+  services: 'config', routes: 'config',
+  logs: 'monitor', circuit: 'monitor', 'circuit-events': 'monitor', ratelimit: 'monitor',
+  apikeys: 'security', security: 'security', brute: 'security'
+};
+
+function expandGroup(name) {
+  document.querySelectorAll('.nav-group').forEach(g => g.classList.remove('active-group'));
+  document.getElementById('grp-' + name).classList.add('active-group');
+}
+
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  document.getElementById('nav-' + name)?.classList.add('active');
+  expandGroup(TAB_GROUP[name]);
+  currentTab = name;
+  loadStats();
+  loadTabData(name);
+}
+
+function loadTabData(name, silent = false) {
+  if (name === 'services') loadServices(silent);
+  else if (name === 'routes') loadRoutes(silent);
+  else if (name === 'logs') {
+    const active = document.querySelector('#tab-logs .sub-pane.active');
+    if (active?.id === 'sub-access-logs') loadAccessLogs();
+    else if (active?.id === 'sub-gw-lifecycle') loadGwLifecycle();
+    else loadRequestLogs(undefined, silent);
+  }
+  else if (name === 'circuit') loadCircuitBreaker();
+  else if (name === 'circuit-events') loadCircuitEvents();
+  else if (name === 'ratelimit') loadRateLimitStatus();
+  else if (name === 'apikeys') loadApiKeys();
+  else if (name === 'security') loadBlacklist();
+  else if (name === 'brute')    loadBruteForce();
+}
+
+function showSubTab(name, btn) {
+  document.querySelectorAll('#tab-logs .sub-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('sub-' + name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'api-logs') loadRequestLogs();
+  else if (name === 'access-logs') loadAccessLogs();
+  else if (name === 'gw-lifecycle') loadGwLifecycle();
+}
+
+// ── 서킷브레이크 ─────────────────────────────────────────
+let svcStatsChart = null;
+
+async function loadSvcStatsChart() {
+  try {
+    const r = await fetch(`${API}/stats/services`);
+    const data = await r.json();
+    const canvas = document.getElementById('svc-stats-chart');
+    if (!canvas) return;
+    if (!data.length) { canvas.parentElement.innerHTML = '<div class="empty" style="padding:24px">요청 이력이 없습니다</div>'; return; }
+    const labels = data.map(d => d.serviceId);
+    const totals = data.map(d => Number(d.total));
+    const errors = data.map(d => Number(d.errors));
+    if (svcStatsChart) svcStatsChart.destroy();
+    svcStatsChart = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label: '전체 요청', data: totals, backgroundColor: '#065A82', borderRadius: 4 },
+          { label: '5xx 오류', data: errors, backgroundColor: '#B91C1C', borderRadius: 4 }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'top' } },
+        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+      }
+    });
+  } catch(e) {}
+}
+
+async function loadCircuitBreaker() {
+  loadSvcStatsChart();
+  const grid = document.getElementById('cb-grid');
+  try {
+    const res = await fetch(`${API}/circuit-breaker`);
+    const list = await res.json();
+    if (!list.length) {
+      grid.innerHTML = '<div class="empty">등록된 서비스가 없습니다</div>';
+      return;
+    }
+    grid.innerHTML = list.map(s => {
+      const stateClass = s.state === 'CLOSED' ? 'closed' : s.state === 'OPEN' ? 'open' : 'half';
+      const stateIcon  = s.state === 'CLOSED' ? '●' : s.state === 'OPEN' ? '◉' : '◑';
+      const forcedBadge = s.forced
+        ? `<span class="cb-forced-badge">관리자 강제 차단</span>`
+        : '';
+      const retry = s.state === 'OPEN' && !s.forced
+        ? `<div class="cb-metric">복구까지 <span>${s.retryAfterSec}초</span></div>`
+        : '';
+      const isBlocked = s.state === 'OPEN' || s.state === 'HALF_OPEN';
+      const btnOpen  = isBlocked
+        ? `<button class="cb-seg sel-danger"  disabled>▶ 강제 차단</button>`
+        : `<button class="cb-seg idle" onclick="cbForceOpen('${s.serviceId}')">강제 차단</button>`;
+      const btnClose = !isBlocked
+        ? `<button class="cb-seg sel-success" disabled>▶ 복구</button>`
+        : `<button class="cb-seg idle" onclick="cbForceClose('${s.serviceId}')">복구</button>`;
+      return `<div class="cb-card ${stateClass}">
+        <div class="cb-name">${s.serviceId}${forcedBadge}</div>
+        <div class="cb-state ${stateClass}">${stateIcon} ${s.state}</div>
+        <div class="cb-metric">연속 실패 <span>${s.failureCount} / ${s.failureThreshold}</span></div>
+        ${retry}
+        <div class="cb-btn-group">${btnOpen}${btnClose}</div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    grid.innerHTML = '<div class="empty">데이터를 불러오지 못했습니다</div>';
+  }
+}
+
+async function cbForceOpen(serviceId) {
+  try {
+    await fetch(`${API}/circuit-breaker/${serviceId}/open`, { method: 'POST' });
+    toast(`[${serviceId}] 서킷브레이커 강제 차단됨`, 'error');
+    setTimeout(loadCircuitBreaker, 300);
+  } catch(e) { toast('처리 실패', 'error'); }
+}
+
+async function cbForceClose(serviceId) {
+  try {
+    await fetch(`${API}/circuit-breaker/${serviceId}/close`, { method: 'POST' });
+    toast(`[${serviceId}] 서킷브레이커 복구됨`, 'success');
+    setTimeout(loadCircuitBreaker, 300);
+  } catch(e) { toast('처리 실패', 'error'); }
+}
+
+// ── 게이트웨이 정보 ──────────────────────────────────────
+let uptimeBase = 0;
+async function loadInfo() {
+  try {
+    const r = await fetch(`${API}/info`);
+    const d = await r.json();
+    const env = d.environment || '';
+    document.getElementById('gw-name-env').textContent = `${d.name || 'APIGW'}  [${env}]`;
+    uptimeBase = d.uptimeSeconds || 0;
+    updateUptime();
+  } catch(e) {}
+}
+
+function updateUptime() {
+  const el = document.getElementById('gw-uptime');
+  if (!el) return;
+  const s = uptimeBase;
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  el.textContent = d > 0
+    ? `↑ ${d}일 ${h}시간 ${m}분`
+    : h > 0
+      ? `↑ ${h}시간 ${m}분`
+      : `↑ ${m}분 ${sec}초`;
+  uptimeBase++;
+}
+
+setInterval(updateUptime, 1000);
+
+// ── 게이트웨이 이력 ──────────────────────────────────────
+async function loadGwLifecycle() {
+  const tbody = document.getElementById('gw-lifecycle-body');
+  try {
+    const r = await fetch(`${API}/lifecycle`);
+    const logs = await r.json();
+    if (!logs.length) {
+      tbody.innerHTML = '<tr><td colspan="3" class="empty">이력이 없습니다</td></tr>';
+      return;
+    }
+    tbody.innerHTML = logs.map(l => {
+      const time = l.eventAt ? new Date(l.eventAt).toLocaleString('ko-KR') : '-';
+      const isStart = l.event === 'START';
+      const badge = isStart
+        ? '<span class="badge badge-up">START</span>'
+        : '<span class="badge badge-down">STOP</span>';
+      return `<tr>
+        <td style="font-size:12px;color:#64748B">${time}</td>
+        <td>${badge}</td>
+        <td><code style="font-size:12px">${l.nodeName || '-'}</code></td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="3" class="empty">로드 실패</td></tr>';
+  }
+}
+
+async function loadAll(silent = false) {
+  await loadStats();
+  loadTabData(currentTab, silent);
+  document.getElementById('lastUpdate').textContent =
+    new Date().toLocaleTimeString('ko-KR');
+}
+
+// ── 통계 ─────────────────────────────────────────────────
+async function loadStats() {
+  try {
+    const r = await fetch(`${API}/stats`);
+    const d = await r.json();
+    document.getElementById('stat-svc-total').textContent   = (d.totalServiceCount  ?? 0).toLocaleString();
+    document.getElementById('stat-svc-active').textContent  = (d.activeServiceCount  ?? 0).toLocaleString();
+    document.getElementById('stat-up').textContent          = (d.upCount             ?? 0).toLocaleString();
+    document.getElementById('stat-down').textContent        = (d.downCount           ?? 0).toLocaleString();
+    document.getElementById('stat-route-total').textContent = (d.totalRouteCount     ?? 0).toLocaleString();
+    document.getElementById('stat-route-active').textContent= (d.activeRouteCount    ?? 0).toLocaleString();
+    document.getElementById('log-total').textContent   = (d.totalRequests ?? 0).toLocaleString();
+    document.getElementById('log-blocked').textContent = (d.totalBlocked ?? 0).toLocaleString();
+  } catch(e) {}
+}
+
+// ── 서비스 ───────────────────────────────────────────────
+async function loadServices(silent = false) {
+  if (!silent) document.getElementById('services-body').innerHTML = '<tr><td colspan="7" class="empty"><span class="spinner"></span></td></tr>';
+  try {
+    const r = await fetch(`${API}/services`);
+    allServices = await r.json();
+    renderServicePage(0);
+  } catch(e) {
+    document.getElementById('services-body').innerHTML = '<tr><td colspan="7" class="empty">로드 실패</td></tr>';
+  }
+}
+
+function renderServicePage(page) {
+  svcPage = page;
+  const tbody = document.getElementById('services-body');
+  if (!allServices.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty">등록된 서비스가 없습니다</td></tr>';
+    document.getElementById('svc-pagination').innerHTML = '';
+    return;
+  }
+  const sorted = [...allServices].sort((a, b) => {
+    const d = new Date(a.createdAt) - new Date(b.createdAt);
+    return svcSort === 'newest' ? -d : d;
+  });
+  const items = sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  tbody.innerHTML = items.map((s, idx) => {
+    const rowNum = page * PAGE_SIZE + idx + 1;
+    const insts   = s.instances || [];
+    const upCnt   = insts.filter(i => i.status === 'UP' && i.enabled).length;
+    const downCnt = insts.filter(i => i.status === 'DOWN').length;
+    const total   = insts.length;
+    const instBadge = total === 0
+      ? '<span style="color:#94A3B8;font-size:12px">인스턴스 없음</span>'
+      : downCnt > 0
+        ? `<span class="badge badge-up">UP ${upCnt}</span> <span class="badge badge-down" style="margin-left:4px">DOWN ${downCnt}</span> <span style="color:#94A3B8;font-size:12px">/ ${total}</span>`
+        : `<span class="badge badge-up">UP ${upCnt}</span> <span style="color:#94A3B8;font-size:12px">/ ${total}</span>`;
+    const toggleSvcBtn = `<label class="toggle toggle-table" title="${s.enabled ? '비활성화' : '활성화'}" style="margin:auto 0">
+        <input type="checkbox" ${s.enabled ? 'checked' : ''} onchange="toggleServiceEnabled('${s.serviceId}', ${s.enabled})">
+        <span class="toggle-slider"></span>
+      </label>`;
+    return `
+      <tr class="svc-row-body" id="svc-row-${s.serviceId}" onclick="toggleInstRow('${s.serviceId}',event)">
+        <td class="col-num">${rowNum}</td>
+        <td>${toggleSvcBtn}</td>
+        <td><code>${s.serviceId}</code></td>
+        <td>${s.serviceName || '-'}</td>
+        <td>${instBadge}</td>
+        <td style="font-size:12px;color:#64748B">${s.description || '-'}</td>
+        <td onclick="event.stopPropagation()">
+          <div class="kebab-wrap">
+            <button class="kebab-btn" onclick="toggleKebab('${s.serviceId}',event)">⋮</button>
+            <div class="kebab-dd" id="kebab-${s.serviceId}" style="display:none">
+              <div class="kebab-dd-item" onmousedown="closeAllKebabs();navigateToRoute('${s.serviceId}')">라우팅룰</div>
+              <div class="kebab-dd-item" onmousedown='closeAllKebabs();openServiceModal(${JSON.stringify(s)})'>수정</div>
+              <div class="kebab-dd-item kebab-dd-del" onmousedown="closeAllKebabs();deleteService('${s.serviceId}')">삭제</div>
+            </div>
+          </div>
+        </td>
+      </tr>`;
+  }).join('');
+  renderPagination('svc-pagination', Math.ceil(allServices.length / PAGE_SIZE), page, 'renderServicePage');
+}
+
+function renderInstanceSection(serviceId, instances) {
+  const header = `<div class="inst-section-header">
+    <span class="inst-section-label">인스턴스 ${instances.length}개</span>
+    <button class="btn btn-primary btn-sm" onclick="openInstanceModal('${serviceId}')">+ 인스턴스 추가</button>
+  </div>`;
+
+  if (!instances.length) {
+    return `<div class="inst-section">${header}<div class="inst-empty">인스턴스가 없습니다. 위 버튼으로 추가하세요.</div></div>`;
+  }
+
+  const cards = instances.map(i => {
+    const statusBadge = i.status === 'UP'
+      ? '<span class="badge badge-up">UP</span>'
+      : i.status === 'DOWN'
+        ? '<span class="badge badge-down">DOWN</span>'
+        : '<span class="badge badge-check">CHECKING</span>';
+    const proto = i.protocol === 'HTTPS'
+      ? '<span class="badge badge-https">HTTPS</span>'
+      : '<span class="badge badge-http">HTTP</span>';
+    const regType = i.registrationType === 'DYNAMIC'
+      ? '<span class="badge badge-dynamic">Dynamic</span>'
+      : '<span class="badge badge-static">Static</span>';
+    const hb = i.lastHeartbeat
+      ? new Date(i.lastHeartbeat).toLocaleString('ko-KR', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})
+      : '-';
+    const cardClass = !i.enabled ? 'inst-card disabled'
+      : i.status === 'DOWN' ? 'inst-card down'
+      : i.status === 'CHECKING' ? 'inst-card checking'
+      : 'inst-card';
+    const toggleInstBtn = `<label class="toggle toggle-table" title="${i.enabled ? '비활성화' : '활성화'}" style="margin:auto 0">
+      <input type="checkbox" ${i.enabled ? 'checked' : ''} onchange="toggleInstanceEnabled(${i.id},'${serviceId}',${i.enabled})">
+      <span class="toggle-slider"></span>
+    </label>`;
+    const deleteBtn = i.registrationType !== 'DYNAMIC'
+      ? `<button class="btn btn-danger btn-sm" onclick="deleteInstance(${i.id}, '${serviceId}')">삭제</button>`
+      : '';
+    return `<div class="${cardClass}">
+      <div class="inst-card-addr"><code>${i.host}:${i.port}</code></div>
+      <div class="inst-card-badges">${proto}${regType}${statusBadge}</div>
+      <div class="inst-card-time">${hb} 확인</div>
+      <div class="inst-card-actions">
+        <button class="btn btn-secondary btn-sm" onclick='openInstanceModal("${serviceId}", ${JSON.stringify(i)})'>수정</button>
+        ${toggleInstBtn}
+        ${deleteBtn}
+      </div>
+    </div>`;
+  }).join('');
+
+  return `<div class="inst-section">${header}<div class="inst-cards">${cards}</div></div>`;
+}
+
+function toggleInstRow(serviceId, e) {
+  if (e && e.target.closest('.kebab-wrap, .toggle, button, label, input')) return;
+  openInstListModal(serviceId);
+}
+
+function openInstListModal(serviceId) {
+  currentInstServiceId = serviceId;
+  const svc = allServices.find(s => s.serviceId === serviceId);
+  document.getElementById('inst-list-title').textContent = `${serviceId} 인스턴스`;
+  document.getElementById('inst-list-add-btn').onclick = () => { closeModal('inst-list-modal'); openInstanceModal(serviceId); };
+  const insts = (svc?.instances || []).slice().sort((a, b) => a.id - b.id);
+  const body = document.getElementById('inst-list-body');
+  if (!insts.length) {
+    body.innerHTML = '<div class="inst-empty" style="padding:20px;text-align:center">인스턴스가 없습니다.</div>';
+  } else {
+    body.innerHTML = '<div class="inst-cards">' + insts.map((i, idx) => {
+      const statusBadge = i.status === 'UP' ? '<span class="badge badge-up">UP</span>'
+        : i.status === 'DOWN' ? '<span class="badge badge-down">DOWN</span>'
+        : '<span class="badge badge-check">CHECKING</span>';
+      const proto = i.protocol === 'HTTPS' ? '<span class="badge badge-https">HTTPS</span>' : '<span class="badge badge-http">HTTP</span>';
+      const regType = i.registrationType === 'DYNAMIC' ? '<span class="badge badge-dynamic">Dynamic</span>' : '<span class="badge badge-static">Static</span>';
+      const hb = i.lastHeartbeat ? new Date(i.lastHeartbeat).toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '-';
+      const rowClass = !i.enabled ? 'inst-card-row disabled' : i.status === 'DOWN' ? 'inst-card-row down' : i.status === 'CHECKING' ? 'inst-card-row checking' : 'inst-card-row';
+      const toggleBtn = `<label class="toggle toggle-table"><input type="checkbox" ${i.enabled?'checked':''} onchange="toggleInstanceEnabled(${i.id},'${serviceId}',${i.enabled})"><span class="toggle-slider"></span></label>`;
+      const deleteBtn = i.registrationType !== 'DYNAMIC' ? `<button class="btn btn-danger btn-sm" onclick="deleteInstance(${i.id},'${serviceId}')">삭제</button>` : '';
+      return `<div class="${rowClass}">
+        <div class="inst-col inst-col-num">${idx + 1}</div>
+        <div class="inst-col inst-col-addr">${toggleBtn}<code>${i.host}:${i.port}</code></div>
+        <div class="inst-col inst-col-badges">${proto}${regType}${statusBadge}</div>
+        <div class="inst-col inst-col-time">${hb} 확인</div>
+        <div class="inst-col inst-col-actions">
+          <button class="btn btn-secondary btn-sm" onclick='closeModal("inst-list-modal");openInstanceModal("${serviceId}",${JSON.stringify(i)})'>수정</button>
+          ${deleteBtn}
+        </div>
+      </div>`;
+    }).join('') + '</div>';
+  }
+  document.getElementById('inst-list-modal').classList.add('active');
+}
+
+function toggleKebab(serviceId, e) {
+  e.stopPropagation();
+  const dd = document.getElementById('kebab-' + serviceId);
+  const isOpen = dd.style.display !== 'none';
+  closeAllKebabs();
+  if (!isOpen) dd.style.display = 'block';
+}
+
+function closeAllKebabs() {
+  document.querySelectorAll('[id^="kebab-"]').forEach(d => d.style.display = 'none');
+}
+
+document.addEventListener('click', closeAllKebabs);
+
+function navigateToRoute(serviceId) {
+  loadRoutes().then(() => openRouteListModal(serviceId));
+}
+
+function openRouteListModal(serviceId) {
+  currentRouteServiceId = serviceId;
+  const svc = allServices.find(s => s.serviceId === serviceId);
+  document.getElementById('route-list-title').textContent = `${serviceId} 라우팅 룰`;
+  document.getElementById('route-list-add-btn').onclick = () => {
+    closeModal('route-list-modal');
+    const svc = allServices.find(s => s.serviceId === serviceId);
+    openRouteModal();
+    setTimeout(() => selectSvcFromDropdown(serviceId, svc?.serviceName || ''), 50);
+  };
+
+  const routes = allRoutes.filter(r => r.targetServiceId === serviceId);
+  const body = document.getElementById('route-list-body');
+
+  if (!routes.length) {
+    body.innerHTML = '<div style="padding:20px;text-align:center;color:#94A3B8">등록된 라우팅 룰이 없습니다.</div>';
+  } else {
+    const rows = routes.map((rt, idx) => {
+      const method = rt.method && rt.method !== 'ALL'
+        ? `<span class="badge" style="background:#EDE9FE;color:#6D28D9">${rt.method}</span>`
+        : '<span style="color:#94A3B8;font-size:12px">ALL</span>';
+      const badge = rt.routeType === 'CONFIG'
+        ? '<span class="badge badge-config">CONFIG</span>'
+        : '<span class="badge badge-manual">MANUAL</span>';
+      const toggleBtn = `<label class="toggle toggle-table"><input type="checkbox" ${rt.enabled ? 'checked' : ''} onchange="toggleRouteEnabled('${rt.id}',${rt.enabled})"><span class="toggle-slider"></span></label>`;
+      const rowClass = rt.enabled ? 'inst-card-row' : 'inst-card-row disabled';
+      return `<div class="${rowClass}" style="border-left-color:${rt.enabled ? '#1D4ED8' : '#CBD5E1'}">
+        <div class="inst-col inst-col-num">${idx + 1}</div>
+        <div class="inst-col" style="flex:0 0 60px">${toggleBtn}</div>
+        <div class="inst-col inst-col-addr" style="flex:0 0 200px"><code style="font-size:12px">${rt.id}</code></div>
+        <div class="inst-col" style="flex:1;font-size:13px">${rt.name || '-'}</div>
+        <div class="inst-col" style="flex:0 0 180px"><code style="font-size:12px">${rt.apiPath}</code></div>
+        <div class="inst-col inst-col-badges">${method}${badge}</div>
+        <div class="inst-col inst-col-actions">
+          <button class="btn btn-secondary btn-sm" onclick='closeModal("route-list-modal");openRouteModal(${JSON.stringify(rt)})'>수정</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteRoute('${rt.id}')">삭제</button>
+        </div>
+      </div>`;
+    }).join('');
+    body.innerHTML = '<div class="inst-cards">' + rows + '</div>';
+  }
+
+  document.getElementById('route-list-modal').classList.add('active');
+}
+
+function showSvcDropdown() {
+  const input = document.getElementById('route-service-search');
+  const dd = document.getElementById('route-service-dd');
+  const q = input.value.toLowerCase();
+  const filtered = allServices.filter(s => s.enabled && (
+    s.serviceId.toLowerCase().includes(q) || (s.serviceName || '').toLowerCase().includes(q)
+  ));
+  dd.innerHTML = filtered.length
+    ? filtered.map(s => `<div class="svc-dd-item" onmousedown="selectSvcFromDropdown('${s.serviceId}','${(s.serviceName||'').replace(/'/g,"\\'")}')">
+        <code style="font-size:12px">${s.serviceId}</code>${s.serviceName ? ` <span style="color:#64748B;font-size:12px">— ${s.serviceName}</span>` : ''}
+      </div>`).join('')
+    : '<div class="svc-dd-empty">검색 결과 없음</div>';
+  dd.style.display = 'block';
+}
+
+function filterSvcDropdown() { showSvcDropdown(); }
+
+function hideSvcDropdownLater() {
+  setTimeout(() => { document.getElementById('route-service-dd').style.display = 'none'; }, 200);
+}
+
+function selectSvcFromDropdown(serviceId, serviceName) {
+  document.getElementById('route-service').value = serviceId;
+  document.getElementById('route-service-search').value = serviceId + (serviceName ? ' — ' + serviceName : '');
+  document.getElementById('route-service-dd').style.display = 'none';
+  document.getElementById('route-service-search').classList.remove('field-error');
+  updateRoutePreview();
+}
+
+function openServiceModal(existing) {
+  const isEdit = existing && typeof existing === 'object';
+  document.getElementById('service-modal-title').textContent = isEdit ? '서비스 수정' : '서비스 추가';
+  document.getElementById('svc-edit-id').value   = isEdit ? existing.serviceId : '';
+  document.getElementById('svc-id').value        = isEdit ? existing.serviceId : '';
+  document.getElementById('svc-name').value      = isEdit ? (existing.serviceName || '') : '';
+  document.getElementById('svc-desc').value      = isEdit ? (existing.description || '') : '';
+  document.getElementById('svc-enabled').checked = isEdit ? existing.enabled : true;
+  document.getElementById('svc-id').disabled     = isEdit;
+  document.getElementById('service-error').style.display = 'none';
+  document.getElementById('svc-id').classList.remove('field-error');
+  document.getElementById('service-modal').classList.add('active');
+}
+
+async function submitService() {
+  const errEl = document.getElementById('service-error');
+  errEl.style.display = 'none';
+  document.getElementById('svc-id').classList.remove('field-error');
+  const editId = document.getElementById('svc-edit-id').value;
+  const body = {
+    serviceId:   document.getElementById('svc-id').value.trim(),
+    serviceName: document.getElementById('svc-name').value.trim(),
+    description: document.getElementById('svc-desc').value.trim(),
+    enabled:     document.getElementById('svc-enabled').checked
+  };
+  if (!body.serviceId) {
+    document.getElementById('svc-id').classList.add('field-error');
+    errEl.textContent = '필수 항목을 입력하세요: 서비스 ID'; errEl.style.display = 'block'; return;
+  }
+  if (!editId && allServices.some(s => s.serviceId === body.serviceId)) {
+    document.getElementById('svc-id').classList.add('field-error');
+    errEl.textContent = `'${body.serviceId}' ID의 서비스가 이미 존재합니다.`; errEl.style.display = 'block'; return;
+  }
+  try {
+    const url    = editId ? `${API}/services/${editId}` : `${API}/services`;
+    const method = editId ? 'PUT' : 'POST';
+    const r = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    if (!r.ok) {
+      let msg = `저장 실패 (HTTP ${r.status})`;
+      try { const err = await r.json(); if (err.message) msg = err.message; } catch {}
+      errEl.textContent = msg; errEl.style.display = 'block'; return;
+    }
+    closeModal('service-modal');
+    toast(editId ? '서비스가 수정됐습니다' : '서비스가 추가됐습니다', 'success');
+    loadServices();
+  } catch(e) { errEl.textContent = e.message || '저장 중 오류가 발생했습니다.'; errEl.style.display = 'block'; }
+}
+
+function deleteService(serviceId) {
+  showConfirm(`서비스 [${serviceId}] 및 하위 인스턴스를 모두 삭제하시겠습니까?`, async () => {
+    try {
+      await fetch(`${API}/services/${serviceId}`, { method:'DELETE' });
+      toast('삭제됐습니다', 'success');
+      loadServices();
+    } catch(e) { toast('삭제 실패', 'error'); }
+  });
+}
+
+// ── 인스턴스 ─────────────────────────────────────────────
+function openInstanceModal(serviceId, existing) {
+  const isEdit = existing && typeof existing === 'object';
+  document.getElementById('inst-modal-title').textContent = isEdit ? '인스턴스 수정' : '인스턴스 추가';
+  document.getElementById('inst-service-id').value  = serviceId;
+  document.getElementById('inst-edit-id').value     = isEdit ? existing.id : '';
+  document.getElementById('inst-host').value        = isEdit ? existing.host : '';
+  document.getElementById('inst-port').value        = isEdit ? existing.port : '';
+  document.getElementById('inst-protocol').value    = isEdit ? existing.protocol : 'HTTP';
+  document.getElementById('inst-enabled').checked   = isEdit ? existing.enabled : true;
+  document.getElementById('instance-error').style.display = 'none';
+  ['inst-host','inst-port'].forEach(f => document.getElementById(f).classList.remove('field-error'));
+  document.getElementById('instance-modal').classList.add('active');
+}
+
+async function submitInstance() {
+  const errEl = document.getElementById('instance-error');
+  errEl.style.display = 'none';
+  const serviceId = document.getElementById('inst-service-id').value;
+  const editId    = document.getElementById('inst-edit-id').value;
+  const body = {
+    host:     document.getElementById('inst-host').value.trim(),
+    port:     parseInt(document.getElementById('inst-port').value) || null,
+    protocol: document.getElementById('inst-protocol').value,
+    enabled:  document.getElementById('inst-enabled').checked
+  };
+  ['inst-host','inst-port'].forEach(f => document.getElementById(f).classList.remove('field-error'));
+  const instMissing = [];
+  if (!body.host) { document.getElementById('inst-host').classList.add('field-error'); instMissing.push('호스트'); }
+  if (!body.port) { document.getElementById('inst-port').classList.add('field-error'); instMissing.push('포트'); }
+  if (instMissing.length) { errEl.textContent = `필수 항목을 입력하세요: ${instMissing.join(', ')}`; errEl.style.display = 'block'; return; }
+  try {
+    const url    = editId
+      ? `${API}/services/${serviceId}/instances/${editId}`
+      : `${API}/services/${serviceId}/instances`;
+    const method = editId ? 'PUT' : 'POST';
+    const r = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    if (!r.ok) {
+      let msg = `저장 실패 (HTTP ${r.status})`;
+      try { const err = await r.json(); if (err.message) msg = err.message; } catch {}
+      errEl.textContent = msg; errEl.style.display = 'block'; return;
+    }
+    closeModal('instance-modal');
+    toast(editId ? '인스턴스가 수정됐습니다' : '인스턴스가 추가됐습니다', 'success');
+    await loadServices();
+    if (currentInstServiceId) openInstListModal(currentInstServiceId);
+  } catch(e) { errEl.textContent = e.message || '저장 중 오류가 발생했습니다.'; errEl.style.display = 'block'; }
+}
+
+function deleteInstance(id, serviceId) {
+  showConfirm('인스턴스를 삭제하시겠습니까?', async () => {
+    try {
+      await fetch(`${API}/services/${serviceId}/instances/${id}`, { method:'DELETE' });
+      toast('삭제됐습니다', 'success');
+      await loadServices();
+      if (currentInstServiceId) openInstListModal(currentInstServiceId);
+    } catch(e) { toast('삭제 실패', 'error'); }
+  });
+}
+
+async function toggleServiceEnabled(serviceId, currentEnabled) {
+  const svc = allServices.find(s => s.serviceId === serviceId);
+  if (!svc) return;
+  try {
+    await fetch(`${API}/services/${serviceId}`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ serviceName: svc.serviceName, description: svc.description, enabled: !currentEnabled })
+    });
+    toast(!currentEnabled ? '서비스를 활성화했습니다' : '서비스를 비활성화했습니다', 'success');
+    await loadServices();
+  } catch(e) { toast('변경 실패', 'error'); }
+}
+
+async function toggleInstanceEnabled(id, serviceId, currentEnabled) {
+  const svc = allServices.find(s => s.serviceId === serviceId);
+  const inst = svc?.instances?.find(i => i.id === id);
+  if (!inst) return;
+  try {
+    await fetch(`${API}/services/${serviceId}/instances/${id}`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ host: inst.host, port: inst.port, protocol: inst.protocol, enabled: !currentEnabled })
+    });
+    toast(currentEnabled ? '인스턴스를 비활성화했습니다' : '인스턴스를 활성화했습니다', 'success');
+    await loadServices();
+    if (currentInstServiceId) openInstListModal(currentInstServiceId);
+  } catch(e) { toast('변경 실패', 'error'); }
+}
+
+// ── 라우팅 룰 ────────────────────────────────────────────
+async function loadRoutes(silent = false) {
+  if (!silent) document.getElementById('routes-body').innerHTML = '<tr><td colspan="10" class="empty"><span class="spinner"></span></td></tr>';
+  try {
+    const r = await fetch(`${API}/routes`);
+    allRoutes = await r.json();
+    renderRoutePage(0);
+  } catch(e) {
+    document.getElementById('routes-body').innerHTML = '<tr><td colspan="10" class="empty">로드 실패</td></tr>';
+  }
+}
+
+function renderRoutePage(page) {
+  routePage = page;
+  const tbody = document.getElementById('routes-body');
+  if (!allRoutes.length) {
+    tbody.innerHTML = '<tr><td colspan="10" class="empty">등록된 라우팅 룰이 없습니다</td></tr>';
+    document.getElementById('route-pagination').innerHTML = '';
+    return;
+  }
+  const sorted = [...allRoutes].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+  const items = sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  tbody.innerHTML = items.map((rt, idx) => {
+    const rowNum = page * PAGE_SIZE + idx + 1;
+    const badge  = rt.routeType === 'CONFIG' ? '<span class="badge badge-config">CONFIG</span>' : '<span class="badge badge-manual">MANUAL</span>';
+    const method = rt.method && rt.method !== 'ALL' ? `<span class="badge" style="background:#EDE9FE;color:#6D28D9">${rt.method}</span>` : '<span style="color:#94A3B8;font-size:12px">ALL</span>';
+    const toggleRouteBtn = `<label class="toggle toggle-table" title="${rt.enabled ? '비활성화' : '활성화'}" style="margin:auto 0">
+        <input type="checkbox" ${rt.enabled ? 'checked' : ''} onchange="toggleRouteEnabled('${rt.id}', ${rt.enabled})">
+        <span class="toggle-slider"></span>
+      </label>`;
+    return `<tr>
+      <td class="col-num">${rowNum}</td>
+      <td>${toggleRouteBtn}</td>
+      <td><code>${rt.id}</code></td>
+      <td>${rt.name || '-'}</td>
+      <td><code>${rt.targetServiceId || '-'}</code></td>
+      <td><code>${rt.apiPath}</code></td>
+      <td>${method}</td>
+      <td style="text-align:center">${rt.priority ?? 0}</td>
+      <td>${badge}</td>
+      <td onclick="event.stopPropagation()">
+        <div class="kebab-wrap">
+          <button class="kebab-btn" onclick="toggleKebab('route-${rt.id}',event)">⋮</button>
+          <div class="kebab-dd" id="kebab-route-${rt.id}" style="display:none">
+            <div class="kebab-dd-item" onmousedown='closeAllKebabs();openRouteModal(${JSON.stringify(rt)})'>수정</div>
+            <div class="kebab-dd-item kebab-dd-del" onmousedown="closeAllKebabs();deleteRoute('${rt.id}')">삭제</div>
+          </div>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+  renderPagination('route-pagination', Math.ceil(allRoutes.length / PAGE_SIZE), page, 'renderRoutePage');
+}
+
+function openRouteModal(existing) {
+  const isEdit = existing && typeof existing === 'object';
+  document.getElementById('route-modal-title').textContent = isEdit ? '라우팅 룰 수정' : '라우팅 룰 추가';
+  document.getElementById('route-edit-id').value = isEdit ? existing.id : '';
+
+  if (isEdit) {
+    document.getElementById('route-id').value       = existing.id;
+    document.getElementById('route-name').value     = existing.name || '';
+    document.getElementById('route-path').value     = existing.apiPath || '';
+    document.getElementById('route-method').value   = existing.method || 'ALL';
+    document.getElementById('route-priority').value    = existing.priority ?? 0;
+    document.getElementById('route-strip-prefix').value = existing.stripPrefix ?? '';
+    document.getElementById('route-timeout-ms').value   = existing.timeoutMs ?? '';
+    document.getElementById('route-retry-count').value  = existing.retryCount ?? '';
+    document.getElementById('route-desc').value         = existing.description || '';
+    document.getElementById('route-enabled').checked    = existing.enabled !== false;
+    renderConditions(existing.conditions || []);
+    const svc = allServices.find(s => s.serviceId === existing.targetServiceId);
+    selectSvcFromDropdown(existing.targetServiceId || '', svc?.serviceName || '');
+  } else {
+    ['route-id','route-name','route-path','route-desc'].forEach(i => document.getElementById(i).value = '');
+    document.getElementById('route-method').value       = 'ALL';
+    document.getElementById('route-priority').value    = '0';
+    document.getElementById('route-strip-prefix').value = '';
+    document.getElementById('route-timeout-ms').value   = '';
+    document.getElementById('route-retry-count').value  = '';
+    document.getElementById('route-enabled').checked   = true;
+    document.getElementById('route-service').value  = '';
+    document.getElementById('route-service-search').value = '';
+    renderConditions([]);
+  }
+
+  document.getElementById('route-id').disabled = isEdit;
+  document.getElementById('route-error').style.display = 'none';
+  ['route-id','route-path','route-service-search'].forEach(f => document.getElementById(f).classList.remove('field-error'));
+  checkRouteConflicts();
+  updateRoutePreview();
+  document.getElementById('route-modal').classList.add('active');
+}
+
+function updateRoutePreview() {
+  const path    = document.getElementById('route-path').value.trim();
+  const service = document.getElementById('route-service').value;
+  const box     = document.getElementById('route-preview');
+  const rows    = document.getElementById('route-preview-rows');
+
+  if (!path || !service) { box.style.display = 'none'; return; }
+
+  const makeExamples = (p) => {
+    if (p.includes('**')) return ['hello', 'users', 'users/123'].map(s => p.replace('/**', '/'+s).replace('**', s));
+    if (p.includes('*'))  return [p.replace('*', 'example')];
+    return [p];
+  };
+
+  const spVal = document.getElementById('route-strip-prefix').value.trim();
+  const stripCount = spVal !== '' ? parseInt(spVal) : Math.max(1, path.split('/').filter(s => s && !s.includes('*')).length);
+  rows.innerHTML = makeExamples(path).map(gwPath => {
+    const parts = gwPath.replace(/^\//, '').split('/');
+    const backendPath = '/' + parts.slice(stripCount).join('/');
+    return `<div class="route-preview-row">
+      <code class="rp-gw">:8080${gwPath}</code>
+      <span style="color:#94A3B8">→</span>
+      <code class="rp-bk">${service}${backendPath}</code>
+    </div>`;
+  }).join('');
+  box.style.display = 'block';
+}
+
+function renderConditions(conditions) {
+  const wrap = document.getElementById('conditions-wrap');
+  wrap.innerHTML = '';
+  (conditions || []).forEach(c => addConditionRow(c));
+}
+
+function addConditionRow(data) {
+  const wrap = document.getElementById('conditions-wrap');
+  const div  = document.createElement('div');
+  div.className = 'condition-row';
+  div.innerHTML = `
+    <select class="cond-type"><option>Path</option><option>Header</option><option>Query</option><option>Method</option></select>
+    <select class="cond-op"><option>Match</option><option>Contains</option></select>
+    <input class="cond-name" placeholder="속성명">
+    <input class="cond-val"  placeholder="속성값">
+    <button class="btn-icon" onclick="this.parentElement.remove()">🗑</button>`;
+  wrap.appendChild(div);
+  if (data && typeof data === 'object') {
+    div.querySelector('.cond-type').value = data.type || 'Path';
+    div.querySelector('.cond-op').value   = data.operation || 'Match';
+    div.querySelector('.cond-name').value = data.attributeName || '';
+    div.querySelector('.cond-val').value  = data.attributeValue || '';
+  }
+}
+
+async function submitRoute() {
+  const errEl = document.getElementById('route-error');
+  errEl.style.display = 'none';
+  ['route-id','route-path','route-service-search'].forEach(f => document.getElementById(f).classList.remove('field-error'));
+
+  const editId = document.getElementById('route-edit-id').value;
+  const conditions = [...document.querySelectorAll('#conditions-wrap .condition-row')].map(row => ({
+    type: row.querySelector('.cond-type').value,
+    operation: row.querySelector('.cond-op').value,
+    attributeName: row.querySelector('.cond-name').value,
+    attributeValue: row.querySelector('.cond-val').value
+  })).filter(c => c.attributeName);
+
+  const body = {
+    id:              document.getElementById('route-id').value.trim(),
+    name:            document.getElementById('route-name').value.trim(),
+    targetServiceId: document.getElementById('route-service').value,
+    apiPath:         document.getElementById('route-path').value.trim(),
+    method:          document.getElementById('route-method').value,
+    priority:         parseInt(document.getElementById('route-priority').value) || 0,
+    stripPrefix:     (() => { const v = document.getElementById('route-strip-prefix').value.trim(); return v !== '' ? parseInt(v) : null; })(),
+    timeoutMs:       (() => { const v = document.getElementById('route-timeout-ms').value.trim(); return v !== '' ? parseInt(v) : null; })(),
+    retryCount:      (() => { const v = document.getElementById('route-retry-count').value.trim(); return v !== '' ? parseInt(v) : 0; })(),
+    description:      document.getElementById('route-desc').value.trim(),
+    enabled:          document.getElementById('route-enabled').checked,
+    routeType:       'MANUAL',
+    conditions
+  };
+  const missing = [];
+  if (!body.id)              { document.getElementById('route-id').classList.add('field-error');      missing.push('아이디'); }
+  if (!body.targetServiceId) { document.getElementById('route-service-search').classList.add('field-error'); missing.push('대상 서비스'); }
+  if (!body.apiPath)         { document.getElementById('route-path').classList.add('field-error');    missing.push('API 경로'); }
+  if (missing.length) { errEl.textContent = `필수 항목을 입력하세요: ${missing.join(', ')}`; errEl.style.display = 'block'; return; }
+
+  if (!editId && allRoutes.some(r => r.id === body.id)) {
+    document.getElementById('route-id').classList.add('field-error');
+    errEl.textContent = `'${body.id}' ID의 라우팅 룰이 이미 존재합니다.`;
+    errEl.style.display = 'block';
+    return;
+  }
+
+  try {
+    const url    = editId ? `${API}/routes/${editId}` : `${API}/routes`;
+    const method = editId ? 'PUT' : 'POST';
+    const r = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    if (!r.ok) {
+      let msg = `저장 실패 (HTTP ${r.status})`;
+      try {
+        const err = await r.json();
+        if (err.message) msg = err.message;
+        else if (err.error) msg = `${err.error} (${r.status})`;
+      } catch {}
+      errEl.textContent = msg;
+      errEl.style.display = 'block';
+      return;
+    }
+    closeModal('route-modal');
+    toast(editId ? '라우팅 룰이 수정됐습니다' : '라우팅 룰이 추가됐습니다', 'success');
+    loadRoutes();
+  } catch(e) {
+    errEl.textContent = e.message || '저장 중 오류가 발생했습니다.';
+    errEl.style.display = 'block';
+  }
+}
+
+function deleteRoute(id) {
+  showConfirm(`'${id}' 라우팅 룰을 삭제하시겠습니까?`, async () => {
+    try {
+      await fetch(`${API}/routes/${id}`, { method:'DELETE' });
+      toast('삭제됐습니다', 'success');
+      await loadRoutes();
+      if (currentRouteServiceId) openRouteListModal(currentRouteServiceId);
+    } catch(e) { toast('삭제 실패', 'error'); }
+  });
+}
+
+async function toggleRouteEnabled(id, currentEnabled) {
+  const rt = allRoutes.find(r => r.id === id);
+  if (!rt) return;
+  try {
+    await fetch(`${API}/routes/${id}`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        name: rt.name, targetServiceId: rt.targetServiceId, targetPort: rt.targetPort,
+        method: rt.method, apiPath: rt.apiPath, priority: rt.priority,
+        description: rt.description, routeType: rt.routeType,
+        enabled: !currentEnabled, conditions: rt.conditions
+      })
+    });
+    toast(!currentEnabled ? '라우팅 룰을 활성화했습니다' : '라우팅 룰을 비활성화했습니다', 'success');
+    await loadRoutes();
+    if (currentRouteServiceId) openRouteListModal(currentRouteServiceId);
+  } catch(e) { toast('변경 실패', 'error'); }
+}
+
+// ── 요청 이력 ────────────────────────────────────────────
+async function loadRequestLogs(page, silent = false) {
+  if (page !== undefined) logPage = page;
+  const sel = document.getElementById('log-filter-svc');
+  if (sel && allServices.length) {
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">전체</option>' + allServices.map(s => `<option value="${s.serviceId}">${s.serviceId}</option>`).join('');
+    sel.value = cur;
+  }
+  const filter = sel?.value || '';
+  const tbody = document.getElementById('api-logs-body');
+  if (!silent) tbody.innerHTML = '<tr><td colspan="8" class="empty"><span class="spinner"></span></td></tr>';
+  try {
+    const r = await fetch(`${API}/logs?page=${logPage}&size=${LOG_PAGE_SIZE}${filter ? '&serviceId=' + filter : ''}`);
+    const data = await r.json();
+    const logs = data.content || [];
+    if (!logs.length) {
+      tbody.innerHTML = '<tr><td colspan="8" class="empty">요청 이력이 없습니다</td></tr>';
+      document.getElementById('log-pagination').innerHTML = '';
+      return;
+    }
+    tbody.innerHTML = logs.map(l => {
+      const time = l.createdAt ? new Date(l.createdAt).toLocaleString('ko-KR') : '-';
+      const sc = l.statusCode || '-';
+      const scColor = l.statusCode >= 500 ? '#B91C1C' : l.statusCode >= 400 ? '#D97706' : '#15803D';
+      const dur = l.durationMs != null ? `${l.durationMs}ms` : '-';
+      const methodColor = {'GET':'#0369A1','POST':'#15803D','PUT':'#D97706','DELETE':'#B91C1C'}[l.method] || '#334155';
+      return `<tr>
+        <td style="font-size:12px;color:#64748B">${time}</td>
+        <td><span style="font-size:11px;font-weight:700;color:${methodColor}">${l.method || '-'}</span></td>
+        <td><code style="font-size:12px">${l.path || '-'}</code></td>
+        <td><code style="font-size:12px;color:#6D28D9">${l.serviceId || '-'}</code></td>
+        <td>${formatInstance(l.instanceAddress)}</td>
+        <td><span style="font-size:12px;font-weight:700;color:${scColor}">${sc}</span></td>
+        <td style="font-size:12px">${dur}</td>
+        <td style="font-size:12px;color:#64748B">${l.clientIp || '-'}</td>
+      </tr>`;
+    }).join('');
+    renderPagination('log-pagination', data.totalPages, logPage, 'loadRequestLogs');
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty">로드 실패</td></tr>';
+  }
+}
+
+async function loadAccessLogs() {
+  const tbody = document.getElementById('access-logs-body');
+  tbody.innerHTML = '<tr><td colspan="4" class="empty">로딩 중...</td></tr>';
+  try {
+    const res = await fetch('/console/api/login-logs');
+    if (!res.ok) throw new Error(res.status);
+    const list = await res.json();
+    if (!list.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="empty">이력이 없습니다</td></tr>';
+      return;
+    }
+    const resultClass = { SUCCESS: 'badge-up', FAIL: 'badge-down', ERROR: 'badge-check' };
+    tbody.innerHTML = list.map(e => {
+      const cls = resultClass[e.result] || 'badge-static';
+      return `<tr>
+        <td>${e.createdAt ? new Date(e.createdAt).toLocaleString('ko-KR') : '-'}</td>
+        <td>${e.username ?? '-'}</td>
+        <td>${e.clientIp ?? '-'}</td>
+        <td><span class="badge ${cls}">${e.result}</span></td>
+      </tr>`;
+    }).join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="4" class="empty">이력 로드 실패: ${err.message}</td></tr>`;
+  }
+}
+
+// ── 공통 유틸 ────────────────────────────────────────────
+function formatInstance(addr) {
+  if (!addr) return '<span style="color:#94A3B8">-</span>';
+  if (addr.endsWith(':-1')) {
+    const svc = addr.slice(0, -3);
+    return `<span style="font-size:12px;color:#D97706">${svc} <span style="font-size:11px">(인스턴스 없음)</span></span>`;
+  }
+  return `<code style="font-size:12px;color:#0369A1">${addr}</code>`;
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('active');
+}
+
+function showConfirm(message, onConfirm) {
+  document.getElementById('confirm-message').textContent = message;
+  document.getElementById('confirm-ok-btn').onclick = () => {
+    closeModal('confirm-modal');
+    onConfirm();
+  };
+  document.getElementById('confirm-modal').classList.add('active');
+}
+
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('active'); });
+});
+
+function toast(msg, type='success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast show ${type}`;
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ── 라우팅 룰 충돌 감지 ──────────────────────────────────
+function pathsOverlap(a, b) {
+  if (!a || !b) return false;
+  if (a === b) return true;
+  const norm = p => p.replace(/\/+$/, '');
+  a = norm(a); b = norm(b);
+  const prefix = p => p.endsWith('/**') ? p.slice(0, -3) : p.endsWith('/*') ? p.slice(0, -2) : null;
+  const pa = prefix(a), pb = prefix(b);
+  if (pa !== null && (b === pa || b.startsWith(pa + '/'))) return true;
+  if (pb !== null && (a === pb || a.startsWith(pb + '/'))) return true;
+  return false;
+}
+
+function checkRouteConflicts() {
+  const path   = document.getElementById('route-path').value.trim();
+  const method = document.getElementById('route-method').value;
+  const editId = document.getElementById('route-edit-id').value;
+  const warn   = document.getElementById('route-conflict-warn');
+
+  const conflicts = allRoutes.filter(r => {
+    if (r.id === editId) return false;
+    const mOk = method === 'ALL' || r.method === 'ALL' || method === r.method;
+    return mOk && pathsOverlap(path, r.apiPath);
+  });
+
+  if (!path || !conflicts.length) { warn.style.display = 'none'; return; }
+
+  warn.style.display = 'block';
+  warn.innerHTML = '⚠️ 겹칠 수 있는 라우팅 룰:<br>' +
+    conflicts.map(r =>
+      `· <b>${r.id}</b> — <code style="background:#FEF08A;padding:1px 5px;border-radius:3px">${r.apiPath}</code> [${r.method || 'ALL'}] 우선순위 ${r.priority ?? 0}`
+    ).join('<br>');
+}
+
+// ── API 키 관리 ────────────────────────────────────────────
+let allApiKeys = [];
+
+async function loadApiKeys() {
+  const tbody = document.getElementById('apikeys-body');
+  tbody.innerHTML = '<tr><td colspan="7" class="empty"><span class="spinner"></span></td></tr>';
+  try {
+    const r = await fetch(`${API}/apikeys`);
+    allApiKeys = await r.json();
+    renderApiKeys();
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty">로드 실패</td></tr>';
+  }
+}
+
+function renderApiKeys() {
+  const tbody = document.getElementById('apikeys-body');
+  if (!allApiKeys.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty">등록된 API 키가 없습니다</td></tr>';
+    return;
+  }
+  const now = new Date();
+  tbody.innerHTML = allApiKeys.map((k, idx) => {
+    const time = k.createdAt ? new Date(k.createdAt).toLocaleString('ko-KR') : '-';
+    const masked = k.apiKey ? k.apiKey.substring(0, 8) + '••••••••••••••••' : '-';
+    const toggleBtn = `<label class="toggle toggle-table" style="margin:auto 0">
+      <input type="checkbox" ${k.enabled ? 'checked' : ''} onchange="toggleApiKey(${k.id}, ${k.enabled})">
+      <span class="toggle-slider"></span>
+    </label>`;
+    let expiryHtml;
+    if (!k.expiredAt) {
+      expiryHtml = '<span style="font-size:11px;color:#94A3B8">없음</span>';
+    } else {
+      const expDate = new Date(k.expiredAt);
+      const expired = expDate < now;
+      const expStr = expDate.toLocaleString('ko-KR', {year:'2-digit',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+      expiryHtml = expired
+        ? `<span style="font-size:11px;color:#B91C1C;font-weight:700">만료 ${expStr}</span>`
+        : `<span style="font-size:11px;color:#64748B">${expStr}</span>`;
+    }
+    return `<tr>
+      <td class="col-num">${idx + 1}</td>
+      <td>${k.clientName || '-'}</td>
+      <td><code style="font-size:12px">${masked}</code></td>
+      <td style="font-size:12px;color:#64748B">${time}</td>
+      <td>${expiryHtml}<br><button class="btn btn-secondary btn-sm" style="margin-top:4px;font-size:10px" onclick="openSetExpiryModal(${k.id})">설정</button></td>
+      <td>${toggleBtn}</td>
+      <td>
+        <button class="btn btn-danger" style="padding:3px 10px;font-size:12px"
+          onclick="deleteApiKey(${k.id}, '${(k.clientName||'').replace(/'/g,"\\'")}')">삭제</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function openApiKeyModal() {
+  document.getElementById('apikey-client-name').value = '';
+  document.getElementById('apikey-expired-at').value = '';
+  document.getElementById('apikey-error').style.display = 'none';
+  document.getElementById('apikey-form-step').style.display = 'block';
+  document.getElementById('apikey-result-step').style.display = 'none';
+  document.getElementById('apikey-modal-title').textContent = 'API 키 발급';
+  document.getElementById('apikey-modal').classList.add('active');
+}
+
+async function issueApiKey() {
+  const clientName = document.getElementById('apikey-client-name').value.trim();
+  const expiredAtRaw = document.getElementById('apikey-expired-at').value;
+  const errEl = document.getElementById('apikey-error');
+  errEl.style.display = 'none';
+  if (!clientName) {
+    errEl.textContent = '클라이언트명을 입력하세요.';
+    errEl.style.display = 'block';
+    return;
+  }
+  const body = { clientName };
+  if (expiredAtRaw) body.expiredAt = expiredAtRaw;
+  try {
+    const r = await fetch(`${API}/apikeys`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      errEl.textContent = err.message || `발급 실패 (HTTP ${r.status})`;
+      errEl.style.display = 'block';
+      return;
+    }
+    const data = await r.json();
+    document.getElementById('apikey-result-value').textContent = data.apiKey || '';
+    document.getElementById('apikey-form-step').style.display = 'none';
+    document.getElementById('apikey-result-step').style.display = 'block';
+    document.getElementById('apikey-modal-title').textContent = '발급 완료';
+    document.getElementById('apikey-copy-btn').textContent = '복사';
+  } catch(e) {
+    errEl.textContent = '발급 중 오류가 발생했습니다.';
+    errEl.style.display = 'block';
+  }
+}
+
+function copyApiKey() {
+  const key = document.getElementById('apikey-result-value').textContent;
+  navigator.clipboard.writeText(key).then(() => {
+    const btn = document.getElementById('apikey-copy-btn');
+    btn.textContent = '복사됨 ✓';
+    setTimeout(() => { btn.textContent = '복사'; }, 2000);
+  });
+}
+
+function deleteApiKey(id, name) {
+  showConfirm(`'${name}' API 키를 삭제하시겠습니까?`, async () => {
+    try {
+      await fetch(`${API}/apikeys/${id}`, { method: 'DELETE' });
+      toast('삭제됐습니다', 'success');
+      await loadApiKeys();
+    } catch(e) { toast('삭제 실패', 'error'); }
+  });
+}
+
+async function toggleApiKey(id, currentEnabled) {
+  try {
+    await fetch(`${API}/apikeys/${id}/toggle`, { method: 'PATCH' });
+    toast(!currentEnabled ? 'API 키를 활성화했습니다' : 'API 키를 비활성화했습니다', 'success');
+    await loadApiKeys();
+  } catch(e) { toast('변경 실패', 'error'); }
+}
+
+// ── API 키 만료일 설정 ──────────────────────────────────
+let setExpiryTargetId = null;
+
+function openSetExpiryModal(id) {
+  setExpiryTargetId = id;
+  document.getElementById('expiry-input').value = '';
+  document.getElementById('expiry-modal').classList.add('active');
+}
+
+async function submitSetExpiry() {
+  const val = document.getElementById('expiry-input').value;
+  try {
+    await fetch(`${API}/apikeys/${setExpiryTargetId}/expiry`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ expiredAt: val || null })
+    });
+    closeModal('expiry-modal');
+    toast('만료일이 설정됐습니다', 'success');
+    await loadApiKeys();
+  } catch(e) { toast('설정 실패', 'error'); }
+}
+
+// ── IP 블랙리스트 ────────────────────────────────────────
+async function loadBlacklist() {
+  const tbody = document.getElementById('blacklist-body');
+  tbody.innerHTML = '<tr><td colspan="5" class="empty"><span class="spinner"></span></td></tr>';
+  try {
+    const r = await fetch(`${API}/blacklist`);
+    const list = await r.json();
+    if (!list.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">차단된 IP가 없습니다</td></tr>';
+      return;
+    }
+    tbody.innerHTML = list.map((e, idx) => {
+      const time      = e.createdAt ? new Date(e.createdAt).toLocaleString('ko-KR') : '-';
+      const expiry    = e.expiredAt  ? new Date(e.expiredAt).toLocaleString('ko-KR') : '영구';
+      const autoBadge = e.auto
+        ? `<span style="font-size:10px;font-weight:700;background:#F59E0B;color:white;padding:1px 6px;border-radius:3px;margin-left:6px">자동</span>`
+        : '';
+      return `<tr>
+        <td class="col-num">${idx + 1}</td>
+        <td><code style="font-size:13px">${e.ipAddress}</code>${autoBadge}</td>
+        <td style="font-size:12px;color:#64748B">${e.reason || '-'}</td>
+        <td style="font-size:12px;color:#64748B">${time}</td>
+        <td style="font-size:12px;color:#64748B">${expiry}</td>
+        <td>
+          <button class="btn btn-danger btn-sm" onclick="deleteBlacklist(${e.id}, '${e.ipAddress}')">해제</button>
+        </td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty">로드 실패</td></tr>';
+  }
+}
+
+async function addBlacklist() {
+  const ip = document.getElementById('bl-ip').value.trim();
+  const reason = document.getElementById('bl-reason').value.trim();
+  if (!ip) { toast('IP 주소를 입력하세요', 'error'); return; }
+  try {
+    const r = await fetch(`${API}/blacklist`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ ipAddress: ip, reason })
+    });
+    if (!r.ok) { toast(`등록 실패 (HTTP ${r.status})`, 'error'); return; }
+    document.getElementById('bl-ip').value = '';
+    document.getElementById('bl-reason').value = '';
+    toast(`${ip} 차단 등록됨`, 'success');
+    await loadBlacklist();
+  } catch(e) { toast('등록 실패', 'error'); }
+}
+
+function deleteBlacklist(id, ip) {
+  showConfirm(`'${ip}' 차단을 해제하시겠습니까?`, async () => {
+    try {
+      await fetch(`${API}/blacklist/${id}`, { method: 'DELETE' });
+      toast(`${ip} 차단 해제됨`, 'success');
+      await loadBlacklist();
+    } catch(e) { toast('삭제 실패', 'error'); }
+  });
+}
+
+// ── 서킷브레이커 이벤트 이력 ─────────────────────────────
+const EVENT_LABEL = {
+  OPEN:         { text: 'OPEN',         color: '#EF4444' },
+  CLOSED:       { text: 'CLOSED',       color: '#22C55E' },
+  FORCED_OPEN:  { text: '강제 차단',    color: '#A855F7' },
+  FORCED_CLOSE: { text: '강제 복구',    color: '#3B82F6' },
+};
+
+async function loadCircuitEvents() {
+  const tbody = document.getElementById('circuit-events-body');
+  tbody.innerHTML = '<tr><td colspan="4" class="empty"><span class="spinner"></span></td></tr>';
+  try {
+    const r = await fetch(`${API}/circuit-events`);
+    const list = await r.json();
+    if (!list.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="empty">이벤트 이력이 없습니다</td></tr>';
+      return;
+    }
+    tbody.innerHTML = list.map(e => {
+      const lbl = EVENT_LABEL[e.event] || { text: e.event, color: '#64748B' };
+      const badge = `<span style="background:${lbl.color};color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600">${lbl.text}</span>`;
+      return `<tr>
+        <td><code>${e.serviceId}</code></td>
+        <td>${badge}</td>
+        <td style="color:#94A3B8">${e.detail || '-'}</td>
+        <td>${new Date(e.eventAt).toLocaleString('ko-KR')}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="4" class="empty">로드 실패</td></tr>'; }
+}
+
+// ── Rate Limit 현황 ───────────────────────────────────────
+async function loadRateLimitStatus() {
+  const tbody = document.getElementById('ratelimit-body');
+  tbody.innerHTML = '<tr><td colspan="3" class="empty"><span class="spinner"></span></td></tr>';
+  try {
+    const r = await fetch(`${API}/rate-limit-status`);
+    const list = await r.json();
+    if (!list.length) {
+      tbody.innerHTML = '<tr><td colspan="3" class="empty">현재 요청 중인 IP가 없습니다</td></tr>';
+      return;
+    }
+    tbody.innerHTML = list.map(e => {
+      const secs = e.ttlSeconds > 0 ? e.ttlSeconds + '초 후 초기화' : '-';
+      const countCell = e.count > 240
+        ? `<span style="color:#EF4444;font-weight:600">${e.count}회</span>`
+        : e.count > 150
+          ? `<span style="color:#F59E0B;font-weight:600">${e.count}회</span>`
+          : `${e.count}회`;
+      return `<tr>
+        <td><code>${e.ip}</code></td>
+        <td>${countCell}</td>
+        <td>${secs}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="3" class="empty">로드 실패</td></tr>'; }
+}
+
+// ── 브루트포스 현황 ──────────────────────────────────────
+async function loadBruteForce() {
+  const tbody = document.getElementById('brute-body');
+  tbody.innerHTML = '<tr><td colspan="4" class="empty"><span class="spinner"></span></td></tr>';
+  try {
+    const r = await fetch(`${API}/brute-force`);
+    const list = await r.json();
+    if (!list.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="empty">현재 실패 누적 IP가 없습니다</td></tr>';
+      return;
+    }
+    tbody.innerHTML = list.map(e => {
+      const mins = Math.ceil(e.ttlSeconds / 60);
+      const warn = e.failCount >= 4
+        ? `<span style="color:#EF4444;font-weight:600">${e.failCount}회</span>`
+        : `${e.failCount}회`;
+      return `<tr>
+        <td><code>${e.ip}</code></td>
+        <td>${warn}</td>
+        <td>${e.ttlSeconds > 0 ? mins + '분 후 초기화' : '-'}</td>
+        <td><button class="btn btn-sm btn-secondary" onclick="resetBruteForce('${e.ip}')">초기화</button></td>
+      </tr>`;
+    }).join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="4" class="empty">로드 실패</td></tr>'; }
+}
+
+function resetBruteForce(ip) {
+  showConfirm(`'${ip}' 의 로그인 실패 카운터를 초기화하시겠습니까?`, async () => {
+    try {
+      await fetch(`${API}/brute-force/${ip}`, { method: 'DELETE' });
+      toast(`${ip} 카운터 초기화됨`, 'success');
+      await loadBruteForce();
+    } catch(e) { toast('초기화 실패', 'error'); }
+  });
+}
+
+async function logout() {
+  const token = localStorage.getItem('token');
+  if (token) {
+    try {
+      await fetch('/auth/logout', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+    } catch (_) {}
+  }
+  localStorage.removeItem('token');
+  localStorage.removeItem('username');
+  location.replace('/login.html');
+}
+
+// 초기 로드
+loadInfo();
+loadAll();
+setInterval(() => loadAll(true), 30000);
+setInterval(() => {
+  if (currentTab === 'logs') {
+    const active = document.querySelector('#tab-logs .sub-pane.active');
+    if (!active || active.id === 'sub-api-logs') loadRequestLogs(undefined, true);
+  }
+}, 10000);
+</script>
+</body>
+</html>

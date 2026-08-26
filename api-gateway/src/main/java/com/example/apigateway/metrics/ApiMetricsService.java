@@ -10,13 +10,15 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Service
-public class ApiMetricsService {
+public class  ApiMetricsService {
 
     private final MeterRegistry registry;
 
     private final AtomicLong totalRequests = new AtomicLong(0);
     private final AtomicLong totalBlocked  = new AtomicLong(0);
 
+    // 인스턴스별 요청 수 (예: "192.168.1.99:8081" -> 42)
+    private final ConcurrentHashMap<String, AtomicLong> requestsByInstance = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, AtomicLong> blockedByIp = new ConcurrentHashMap<>();
 
     private final Counter requestCounter;
@@ -37,6 +39,18 @@ public class ApiMetricsService {
         totalRequests.incrementAndGet();
     }
 
+    // 실제 라우팅된 백엔드 인스턴스 기록
+    public void recordInstance(String instanceKey) {
+        requestsByInstance
+                .computeIfAbsent(instanceKey, k -> new AtomicLong(0))
+                .incrementAndGet();
+
+        Counter.builder("gateway_instance_requests_total")
+                .tag("instance", instanceKey)
+                .register(registry)
+                .increment();
+    }
+
     public void recordBlocked(String ip) {
         blockedCounter.increment();
         totalBlocked.incrementAndGet();
@@ -47,7 +61,16 @@ public class ApiMetricsService {
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalRequests", totalRequests.get());
         stats.put("totalBlocked", totalBlocked.get());
-        stats.put("blockedByIp", new HashMap<>(blockedByIp));
+
+        // 인스턴스별 요청 수 Map으로 변환
+        Map<String, Long> instanceStats = new HashMap<>();
+        requestsByInstance.forEach((k, v) -> instanceStats.put(k, v.get()));
+        stats.put("requestsByInstance", instanceStats);
+
+        Map<String, Long> blockedStats = new HashMap<>();
+        blockedByIp.forEach((k, v) -> blockedStats.put(k, v.get()));
+        stats.put("blockedByIp", blockedStats);
+
         return stats;
     }
 }

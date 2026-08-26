@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: auth-service
+  datasource:
+    url: jdbc:postgresql://localhost:5433/gatewaydb
+    username: gateway
+    password: gateway1234
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    defer-datasource-initialization: true
+  sql:
+    init:
+      mode: always
+
+server:
+  port: 8082
+
+jwt:
+  secret: "tmp-secret-key-for-dev-must-be-replaced-before-production!!"
+
+pine-gw:
+  url: https://localhost:8080
+  service-id: auth-service
+  host: 127.0.0.1

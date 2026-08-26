@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/gatewaydb
+    username: gateway
+    password: gateway1234
+
+pine-gw:
+  url: http://192.168.1.221
+  host: 192.168.1.221
+
+# jwt.secret은 게이트웨이 prod 설정과 반드시 동일해야 함
+# 인증서버 담당자에게 키 받은 후 아래 값으로 교체
+jwt:
+  secret: "tmp-secret-key-for-dev-must-be-replaced-before-production!!"

@@ -1,0 +1,5 @@
+com\example\authservice\AuthController.class
+com\example\authservice\JwtUtil.class
+com\example\authservice\AuthServiceApplication.class
+com\example\authservice\LoginRequest.class
+com\example\authservice\LoginResponse.class

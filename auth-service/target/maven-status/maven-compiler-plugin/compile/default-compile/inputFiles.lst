@@ -1,0 +1,10 @@
+C:\dev\02_work\ApiGatewayTest\auth-service\src\main\java\com\example\authservice\AppConfig.java
+C:\dev\02_work\ApiGatewayTest\auth-service\src\main\java\com\example\authservice\AuthController.java
+C:\dev\02_work\ApiGatewayTest\auth-service\src\main\java\com\example\authservice\AuthServiceApplication.java
+C:\dev\02_work\ApiGatewayTest\auth-service\src\main\java\com\example\authservice\DataInitializer.java
+C:\dev\02_work\ApiGatewayTest\auth-service\src\main\java\com\example\authservice\JwtUtil.java
+C:\dev\02_work\ApiGatewayTest\auth-service\src\main\java\com\example\authservice\LoginRequest.java
+C:\dev\02_work\ApiGatewayTest\auth-service\src\main\java\com\example\authservice\LoginResponse.java
+C:\dev\02_work\ApiGatewayTest\auth-service\src\main\java\com\example\authservice\RouteAutoRegistrar.java
+C:\dev\02_work\ApiGatewayTest\auth-service\src\main\java\com\example\authservice\User.java
+C:\dev\02_work\ApiGatewayTest\auth-service\src\main\java\com\example\authservice\UserRepository.java

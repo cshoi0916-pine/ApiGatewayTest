@@ -5,6 +5,18 @@ services:
     ports:
       - "6379:6379"
 
+  postgres:
+    image: postgres:16
+    container_name: gateway-postgres
+    environment:
+      POSTGRES_DB: gatewaydb
+      POSTGRES_USER: gateway
+      POSTGRES_PASSWORD: gateway1234
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
   prometheus:
     image: prom/prometheus
     container_name: prometheus
@@ -18,3 +30,6 @@ services:
     container_name: grafana
     ports:
       - "3000:3000"
+
+volumes:
+  postgres_data:

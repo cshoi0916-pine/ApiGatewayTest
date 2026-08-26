@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APIGW 로그인</title>
+<link rel="icon" type="image/png" href="/파인씨앤아이(vertical).png">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family:'Segoe UI',sans-serif;
+  background:#F4F8FC;
+  color:#334155;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:100vh;
+}
+.login-wrap { width:100%; max-width:400px; padding:24px; }
+.login-brand { text-align:center; margin-bottom:32px; }
+.login-brand h1 { font-size:24px; font-weight:700; color:#1A3A5C; letter-spacing:.5px; }
+.login-brand p { font-size:12px; color:#64748B; margin-top:6px; }
+.login-card {
+  background:white;
+  border-radius:12px;
+  box-shadow:0 4px 24px rgba(0,0,0,.08);
+  padding:36px 32px;
+}
+.form-group { margin-bottom:20px; }
+label { display:block; font-size:13px; font-weight:600; color:#334155; margin-bottom:6px; }
+input[type="text"], input[type="password"] {
+  width:100%; padding:10px 14px;
+  border:1px solid #CBD5E1; border-radius:8px;
+  font-size:14px; color:#334155; outline:none;
+  transition:border-color .2s;
+}
+input:focus { border-color:#0EA5E9; box-shadow:0 0 0 3px rgba(14,165,233,.1); }
+.btn-login {
+  width:100%; padding:12px;
+  background:#0EA5E9; color:white;
+  border:none; border-radius:8px;
+  font-size:14px; font-weight:600;
+  cursor:pointer; transition:background .2s;
+  margin-top:4px;
+}
+.btn-login:hover { background:#0284C7; }
+.btn-login:disabled { background:#BAE6FD; cursor:not-allowed; }
+.error-box {
+  display:none;
+  background:#FEF2F2; border:1px solid #FECACA;
+  color:#DC2626; padding:10px 14px;
+  border-radius:8px; font-size:13px; margin-bottom:18px;
+}
+.footer { text-align:center; margin-top:20px; font-size:11px; color:#94A3B8; }
+</style>
+</head>
+<body>
+<div class="login-wrap">
+  <div class="login-brand">
+    <h1>API Gateway</h1>
+    <p>관리 콘솔에 로그인하세요</p>
+  </div>
+  <div class="login-card">
+    <div class="error-box" id="error-box"></div>
+    <div class="form-group">
+      <label for="username">아이디</label>
+      <input type="text" id="username" placeholder="아이디를 입력하세요" autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label for="password">비밀번호</label>
+      <input type="password" id="password" placeholder="비밀번호를 입력하세요" autocomplete="current-password">
+    </div>
+    <button class="btn-login" id="login-btn" onclick="doLogin()">로그인</button>
+  </div>
+  <div class="footer">DH API Gateway &nbsp;·&nbsp; DEV</div>
+</div>
+
+<script>
+document.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+// ?redirect= 파라미터가 있으면 로그인 후 그 경로로, 없으면 콘솔로
+function getRedirectUrl() {
+  const redirect = new URLSearchParams(location.search).get('redirect');
+  // 같은 오리진 경로만 허용 (open redirect 방지)
+  if (redirect && redirect.startsWith('/') && !redirect.startsWith('//')) {
+    return redirect;
+  }
+  return '/console.html';
+}
+
+// redirect 파라미터가 있으면 인증 실패로 온 것 — 만료된 토큰 제거
+if (new URLSearchParams(location.search).get('redirect')) {
+  localStorage.removeItem('token');
+}
+
+async function doLogin() {
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+  const errEl    = document.getElementById('error-box');
+  const btn      = document.getElementById('login-btn');
+
+  errEl.style.display = 'none';
+
+  if (!username || !password) {
+    showError('아이디와 비밀번호를 모두 입력해주세요.');
+    return;
+  }
+
+  btn.disabled    = true;
+  btn.textContent = '로그인 중...';
+
+  try {
+    const res = await fetch('/auth/login', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ username, password })
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      if (res.status === 503) {
+        // 인증서버 오프라인 → jwt.enabled:false 환경에서 bypass
+        localStorage.setItem('token',    'bypass');
+        localStorage.setItem('username', username);
+        location.href = getRedirectUrl();
+        return;
+      }
+      showError(data.message || '아이디 또는 비밀번호가 올바르지 않습니다.');
+      return;
+    }
+
+    localStorage.setItem('token',    data.access_token);
+    localStorage.setItem('username', data.preferred_username || username);
+    location.href = getRedirectUrl();
+
+  } catch (e) {
+    // 인증서버 오프라인 → jwt.enabled:false 환경에서 bypass
+    localStorage.setItem('token',    'bypass');
+    localStorage.setItem('username', username || 'admin');
+    location.href = getRedirectUrl();
+    return;
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = '로그인';
+  }
+}
+
+function showError(msg) {
+  const el = document.getElementById('error-box');
+  el.textContent  = msg;
+  el.style.display = 'block';
+}
+</script>
+</body>
+</html>

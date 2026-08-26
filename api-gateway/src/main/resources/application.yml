@@ -1,5 +1,11 @@
 server:
   port: 8080
+  ssl:
+    enabled: true
+    key-store: classpath:keystore.p12
+    key-store-password: apigw1234
+    key-store-type: PKCS12
+    key-alias: apigw
 
 spring:
   application:
@@ -9,25 +15,24 @@ spring:
     gateway:
       server:
         webflux:
-          routes:
-            - id: backend-service
-              uri: lb://backend-service
-              predicates:
-                - Path=/api/**
-              filters:
-                - StripPrefix=1
+          routes: []   # 라우트는 DB에서 로드
+      httpclient:
+        response-timeout: 5000ms   # 전역 응답 타임아웃 (라우트별 timeout_ms로 개별 오버라이드 가능)
+        connect-timeout: 3000      # 전역 연결 타임아웃 (ms)
 
   data:
     redis:
       host: localhost
       port: 6379
 
-eureka:
-  client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka/
-  instance:
-    prefer-ip-address: true
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5433/gatewaydb
+    username: gateway
+    password: gateway1234
+
+  sql:
+    init:
+      mode: always
 
 management:
   endpoints:
@@ -38,5 +43,62 @@ management:
     health:
       show-details: always
 
+gateway:
+  name: DH-APIGW
+  environment: DEV
+
 rate-limit:
-  requests-per-minute: 60
+  requests-per-minute: 300
+  whitelist-prefixes:          # Rate Limit 미적용 경로 prefix 목록
+    - /console
+    - /actuator
+    - /registry
+  trusted-proxies:   # X-Forwarded-For를 신뢰할 프록시 IP 목록 (nginx 등). 비어있으면 헤더 무시.
+    - 127.0.0.1
+    - 192.168.1.0/24
+  auto-blacklist:
+    enabled: true
+    exceed-count: 5      # 연속 N번 한도 초과 시 자동 차단
+    ttl-hours: 1         # 자동 차단 유지 시간
+
+brute-force:
+  enabled: true
+  max-attempts: 5          # 로그인 실패 N회 연속 시 자동 차단
+  block-hours: 1           # 차단 유지 시간
+  window-minutes: 10       # 이 시간 내 실패 횟수 누적 (이후 자동 초기화)
+
+circuit-breaker:
+  failure-threshold: 5      # 연속 실패 N회 시 OPEN
+  open-duration-ms: 30000   # OPEN 유지 시간 (ms), 이후 HALF-OPEN
+
+api-key:
+  # 실제배포
+#  enabled: true
+  # 테스트
+  enabled: false
+
+jwt:
+  enabled: true
+
+auth:
+  # 인증서버 주소. GatewayAuthController 프록시 + JwtAuthFilter validate API 호출에 함께 사용.
+  server-url: http://192.168.1.183:10101
+
+cors:
+  # ERP 브라우저에서 /auth/session/validate 직접 호출을 허용할 origin (쉼표 구분)
+  allowed-origins: http://localhost:5555
+
+role-auth:
+  enabled: true
+  rules: []
+  # 역할 제한이 필요한 경로는 아래처럼 추가
+  # rules:
+  #   - path: /admin/**
+  #     roles:
+  #       - ADMIN
+
+# 헬스체크 설정
+health-check:
+  heartbeat-timeout-seconds: 30   # heartbeat 없으면 DOWN 처리
+  active-check-interval-seconds: 15
+  fail-threshold: 3               # 연속 N회 실패 시 DOWN
