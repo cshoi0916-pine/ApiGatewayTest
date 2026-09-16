@@ -5,7 +5,7 @@ spring:
     password: gateway1234
 
 pine-gw:
-  url: http://192.168.1.221
+  url: https://192.168.1.221:8080
   host: 192.168.1.221
 
 # jwt.secret은 게이트웨이 prod 설정과 반드시 동일해야 함
