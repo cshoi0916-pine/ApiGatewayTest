@@ -1,9 +1,9 @@
 server:
   port: 8080
   ssl:
-    enabled: true
+    enabled: ${SSL_ENABLED:true}
     key-store: classpath:keystore.p12
-    key-store-password: apigw1234
+    key-store-password: pine1234!@#$
     key-store-type: PKCS12
     key-alias: apigw
 
@@ -22,17 +22,22 @@ spring:
 
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT_NUM:6379}
 
   r2dbc:
-    url: r2dbc:postgresql://localhost:5433/gatewaydb
-    username: gateway
-    password: gateway1234
+    url: r2dbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/gatewaydb
+    username: ${DB_USER:gateway}
+    password: ${DB_PASSWORD:pine1234!@#$}
 
   sql:
     init:
-      mode: always
+      mode: never
+#     mode: always
+
+logging:
+  level:
+    com.example.apigateway.filter.SimpleCircuitBreakerFilter: DEBUG
 
 management:
   endpoints:
@@ -68,7 +73,8 @@ brute-force:
   window-minutes: 10       # 이 시간 내 실패 횟수 누적 (이후 자동 초기화)
 
 circuit-breaker:
-  failure-threshold: 5      # 연속 실패 N회 시 OPEN
+  window-size: 10           # 최근 N건 요청 기준으로 실패 횟수 집계
+  failure-threshold: 5      # 윈도우 내 실패 N건 이상 시 OPEN
   open-duration-ms: 30000   # OPEN 유지 시간 (ms), 이후 HALF-OPEN
 
 api-key:
@@ -81,7 +87,11 @@ jwt:
   enabled: true
 
 auth:
-  # 인증서버 주소. GatewayAuthController 프록시 + JwtAuthFilter validate API 호출에 함께 사용.
+  # 인증서버 주소 — 최초 기동 시 fallback 값으로만 사용됨.
+  # 기동 시 DB(gateway_setting 테이블)에서 auth-server-url을 먼저 로드하며,
+  # DB에 값이 있으면 이 값은 무시된다.
+  # DB에 값이 없는 경우(최초 배포, DB 초기화 등) 이 값이 사용되므로 삭제하면 null이 될 수 있음.
+  # 콘솔 UI > 인증 설정 탭에서 변경하면 DB에 영구 저장되어 이후 재시작에도 유지된다.
   server-url: http://192.168.1.183:10101
 
 cors:

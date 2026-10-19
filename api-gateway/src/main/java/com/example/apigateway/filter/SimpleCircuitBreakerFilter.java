@@ -19,24 +19,25 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
+import org.springframework.web.server.ResponseStatusException;
+
 import java.net.URI;
 import java.time.LocalDateTime;
+import java.util.ArrayDeque;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
 public class SimpleCircuitBreakerFilter implements GlobalFilter, Ordered {
 
     private static final Logger log = LoggerFactory.getLogger(SimpleCircuitBreakerFilter.class);
 
-    private final ConcurrentHashMap<String, AtomicInteger> failures = new ConcurrentHashMap<>();
+    /** 슬라이딩 윈도우: 서비스별 최근 N건 요청 결과 (true=성공, false=실패) */
+    private final ConcurrentHashMap<String, ArrayDeque<Boolean>> windows = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Long> openedAt = new ConcurrentHashMap<>();
-    // 관리자가 강제 OPEN한 서비스 목록 — 시간 기반 자동 해제 없이 forceClose()까지 유지
     private final Set<String> forcedOpen = ConcurrentHashMap.newKeySet();
-    // HALF_OPEN 테스트 요청 진행 중인 서비스 — 딱 1개만 통과시키기 위한 플래그
     private final Set<String> halfOpenTesting = ConcurrentHashMap.newKeySet();
 
     private final ServiceRegistryService registryService;
@@ -48,6 +49,9 @@ public class SimpleCircuitBreakerFilter implements GlobalFilter, Ordered {
 
     @Value("${circuit-breaker.open-duration-ms:30000}")
     private long openDurationMs;
+
+    @Value("${circuit-breaker.window-size:10}")
+    private int windowSize;
 
     public SimpleCircuitBreakerFilter(ServiceRegistryService registryService,
                                        CircuitEventRepository eventRepository) {
@@ -84,7 +88,6 @@ public class SimpleCircuitBreakerFilter implements GlobalFilter, Ordered {
                 return writeCircuitOpenResponse(exchange, serviceId, retryAfter);
             }
 
-            // HALF_OPEN: Set.add()는 원자적 — 처음 들어온 요청만 true, 나머지는 false(거부)
             if (!halfOpenTesting.add(serviceId)) {
                 log.debug("[CircuitBreaker] HALF-OPEN 테스트 진행 중, 거부: {}", serviceId);
                 return writeCircuitOpenResponse(exchange, serviceId, 0);
@@ -98,24 +101,28 @@ public class SimpleCircuitBreakerFilter implements GlobalFilter, Ordered {
             .then(Mono.<Void>fromRunnable(() -> {
                 int statusCode = exchange.getResponse().getStatusCode() != null
                         ? exchange.getResponse().getStatusCode().value() : 0;
+                log.debug("[CB] .then() serviceId={} statusCode={} isHalfOpen={}", serviceId, statusCode, isHalfOpen);
                 if (statusCode >= 500) {
                     halfOpenTesting.remove(serviceId);
                     if (isHalfOpen) {
                         openedAt.put(serviceId, System.currentTimeMillis());
                         log.warn("[CircuitBreaker] HALF-OPEN 테스트 실패, 재OPEN: {}", serviceId);
                     }
-                    recordFailure(serviceId);
+                    checkAndTrip(serviceId, false);
                 } else {
                     halfOpenTesting.remove(serviceId);
-                    openedAt.remove(serviceId);
-                    failures.remove(serviceId);
                     if (isHalfOpen) {
+                        openedAt.remove(serviceId);
+                        resetWindow(serviceId);
                         log.info("[CircuitBreaker] HALF-OPEN 테스트 성공, CLOSED: {}", serviceId);
                         saveEvent(serviceId, "CLOSED", "HALF_OPEN 테스트 성공");
+                    } else {
+                        recordResult(serviceId, true);
                     }
                 }
             }))
             .doOnError(e -> {
+                log.debug("[CB] .doOnError() serviceId={} error={}", serviceId, e.getClass().getName());
                 if (isNetworkError(e)) {
                     halfOpenTesting.remove(serviceId);
                     if (isHalfOpen) {
@@ -123,24 +130,62 @@ public class SimpleCircuitBreakerFilter implements GlobalFilter, Ordered {
                         log.warn("[CircuitBreaker] HALF-OPEN 테스트 실패(연결 에러), 재OPEN: {}", serviceId);
                     }
                     registryService.evictCache(serviceId).subscribe();
-                    recordFailure(serviceId);
+                    checkAndTrip(serviceId, false);
                 }
             });
     }
 
-    private void recordFailure(String serviceId) {
-        int count = failures.computeIfAbsent(serviceId, k -> new AtomicInteger()).incrementAndGet();
-        if (count >= failureThreshold) {
+    /**
+     * 슬라이딩 윈도우에 결과를 추가하고, 실패율이 임계치를 넘으면 OPEN으로 전환한다.
+     */
+    private void checkAndTrip(String serviceId, boolean success) {
+        int failCount = recordResult(serviceId, success);
+        int total = getWindowCount(serviceId);
+        if (!success && total >= failureThreshold && failCount >= failureThreshold) {
             openedAt.put(serviceId, System.currentTimeMillis());
-            log.warn("[CircuitBreaker] OPEN: serviceId={} ({}회 연속 실패)", serviceId, count);
-            saveEvent(serviceId, "OPEN", "연속 실패 " + count + "회");
+            log.warn("[CircuitBreaker] OPEN: serviceId={} (최근 {}건 중 {}건 실패)", serviceId, total, failCount);
+            saveEvent(serviceId, "OPEN", "최근 " + total + "건 중 " + failCount + "건 실패");
+        }
+    }
+
+    /** 윈도우에 결과 추가 → 실패 횟수 반환 */
+    private int recordResult(String serviceId, boolean success) {
+        ArrayDeque<Boolean> window = windows.computeIfAbsent(serviceId, k -> new ArrayDeque<>());
+        synchronized (window) {
+            window.addLast(success);
+            if (window.size() > windowSize) {
+                window.pollFirst();
+            }
+            return (int) window.stream().filter(r -> !r).count();
+        }
+    }
+
+    private int getWindowCount(String serviceId) {
+        ArrayDeque<Boolean> window = windows.get(serviceId);
+        if (window == null) return 0;
+        synchronized (window) { return window.size(); }
+    }
+
+    private void resetWindow(String serviceId) {
+        ArrayDeque<Boolean> window = windows.get(serviceId);
+        if (window != null) {
+            synchronized (window) { window.clear(); }
         }
     }
 
     private boolean isNetworkError(Throwable e) {
         if (e instanceof GatewayServiceException) return true;
+        // SCG가 타임아웃/라우팅 오류를 ResponseStatusException으로 래핑하는 경우 (504 등)
+        if (e instanceof ResponseStatusException rse) {
+            return rse.getStatusCode().is5xxServerError();
+        }
         String cn = e.getClass().getName();
-        return cn.contains("ConnectException") || cn.contains("TimeoutException") || cn.contains("ClosedChannelException");
+        return cn.contains("ConnectException")
+            || cn.contains("TimeoutException")
+            || cn.contains("ClosedChannelException")
+            || cn.contains("NotFoundException")
+            || cn.contains("PrematureCloseException")
+            || cn.contains("ReadTimeoutException");
     }
 
     private Mono<Void> writeCircuitOpenResponse(ServerWebExchange exchange, String serviceId, long retryAfterSec) {
@@ -167,7 +212,6 @@ public class SimpleCircuitBreakerFilter implements GlobalFilter, Ordered {
 
     public void forceOpen(String serviceId) {
         forcedOpen.add(serviceId);
-        failures.computeIfAbsent(serviceId, k -> new AtomicInteger()).set(failureThreshold);
         openedAt.put(serviceId, System.currentTimeMillis());
         halfOpenTesting.remove(serviceId);
         log.info("[CircuitBreaker] 강제 OPEN: serviceId={}", serviceId);
@@ -177,7 +221,7 @@ public class SimpleCircuitBreakerFilter implements GlobalFilter, Ordered {
     public void forceClose(String serviceId) {
         forcedOpen.remove(serviceId);
         openedAt.remove(serviceId);
-        failures.remove(serviceId);
+        resetWindow(serviceId);
         halfOpenTesting.remove(serviceId);
         log.info("[CircuitBreaker] 강제 CLOSE: serviceId={}", serviceId);
         saveEvent(serviceId, "FORCED_CLOSE", "관리자 강제 복구");
@@ -185,8 +229,17 @@ public class SimpleCircuitBreakerFilter implements GlobalFilter, Ordered {
 
     public Map<String, Object> getServiceStatus(String serviceId) {
         Long openTime = openedAt.get(serviceId);
-        int failCount = failures.containsKey(serviceId) ? failures.get(serviceId).get() : 0;
         boolean isForced = forcedOpen.contains(serviceId);
+
+        int failCount = 0;
+        int windowCount = 0;
+        ArrayDeque<Boolean> window = windows.get(serviceId);
+        if (window != null) {
+            synchronized (window) {
+                windowCount = window.size();
+                failCount = (int) window.stream().filter(r -> !r).count();
+            }
+        }
 
         String state;
         long retryAfterSec = 0;
@@ -205,7 +258,9 @@ public class SimpleCircuitBreakerFilter implements GlobalFilter, Ordered {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("state", state);
         m.put("failureCount", failCount);
+        m.put("windowCount", windowCount);
         m.put("failureThreshold", failureThreshold);
+        m.put("windowSize", windowSize);
         m.put("retryAfterSec", retryAfterSec);
         m.put("forced", isForced);
         return m;
@@ -213,6 +268,6 @@ public class SimpleCircuitBreakerFilter implements GlobalFilter, Ordered {
 
     @Override
     public int getOrder() {
-        return 1;  // ApiKeyFilter(-50), IpRateLimitFilter(-1) 이후, LoadBalancer 이전
+        return 1;
     }
 }

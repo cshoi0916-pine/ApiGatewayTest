@@ -20,7 +20,13 @@ public class ApiKeyFilter implements GlobalFilter, Ordered {
     private final ApiKeyService apiKeyService;
 
     @Value("${api-key.enabled:false}")
-    private boolean enabled;
+    private volatile boolean enabled;
+
+    public boolean isEnabled() { return enabled; }
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+        log.info("[API-KEY] 기능 상태 변경: {}", enabled ? "ON" : "OFF");
+    }
 
     public ApiKeyFilter(ApiKeyService apiKeyService) {
         this.apiKeyService = apiKeyService;

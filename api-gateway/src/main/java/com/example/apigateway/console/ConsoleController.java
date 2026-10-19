@@ -3,7 +3,9 @@ package com.example.apigateway.console;
 import com.example.apigateway.console.dto.InstanceRequest;
 import com.example.apigateway.console.dto.RouteRequest;
 import com.example.apigateway.console.dto.ServiceRequest;
+import com.example.apigateway.filter.ApiKeyFilter;
 import com.example.apigateway.filter.CircuitEventRepository;
+import com.example.apigateway.filter.JwtAuthFilter;
 import com.example.apigateway.filter.SimpleCircuitBreakerFilter;
 import com.example.apigateway.metrics.ApiMetricsService;
 import com.example.apigateway.auth.LoginLogRepository;
@@ -12,13 +14,16 @@ import com.example.apigateway.registry.ServiceRegistryService;
 import com.example.apigateway.security.IpBlacklistEntity;
 import com.example.apigateway.security.IpBlacklistFilter;
 import com.example.apigateway.security.IpBlacklistRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.*;
 
 @RestController
@@ -38,6 +43,12 @@ public class ConsoleController {
     private final DatabaseClient databaseClient;
     private final ReactiveStringRedisTemplate redisTemplate;
     private final CircuitEventRepository circuitEventRepository;
+    private final JwtAuthFilter jwtAuthFilter;
+    private final ApiKeyFilter apiKeyFilter;
+    private final WebClient webClient;
+
+    @Value("${auth.server-url:}")
+    private String authServerUrl;
 
     private static final String BRUTE_FORCE_KEY_PREFIX = "login:fail:";
     private static final String RATE_KEY_PREFIX = "rate:";
@@ -54,7 +65,10 @@ public class ConsoleController {
                              IpBlacklistFilter ipBlacklistFilter,
                              DatabaseClient databaseClient,
                              ReactiveStringRedisTemplate redisTemplate,
-                             CircuitEventRepository circuitEventRepository) {
+                             CircuitEventRepository circuitEventRepository,
+                             JwtAuthFilter jwtAuthFilter,
+                             ApiKeyFilter apiKeyFilter,
+                             WebClient.Builder webClientBuilder) {
         this.registryService = registryService;
         this.dynamicRouteService = dynamicRouteService;
         this.metricsService = metricsService;
@@ -68,6 +82,9 @@ public class ConsoleController {
         this.databaseClient = databaseClient;
         this.redisTemplate = redisTemplate;
         this.circuitEventRepository = circuitEventRepository;
+        this.jwtAuthFilter = jwtAuthFilter;
+        this.apiKeyFilter = apiKeyFilter;
+        this.webClient = webClientBuilder.build();
     }
 
     // ─── 서비스 (논리) ────────────────────────────────────────
@@ -442,6 +459,85 @@ public class ConsoleController {
                 });
             })
             .sort((a, b) -> Integer.compare((int) b.get("count"), (int) a.get("count")));
+    }
+
+    // ─── JWT 인증 토글 ────────────────────────────────────────
+
+    @GetMapping("/auth-status")
+    public Mono<Map<String, Object>> getAuthStatus() {
+        boolean filterEnabled = jwtAuthFilter.isEnabled();
+        String url = jwtAuthFilter.getAuthServerUrl();
+
+        Mono<Boolean> connectedMono = (filterEnabled && url != null && !url.isBlank())
+            ? webClient.get()
+                  .uri(url + "/api/auth/validate")
+                  .exchangeToMono(response ->
+                      response.releaseBody().thenReturn(response.statusCode().value() == 401))
+                  .timeout(Duration.ofSeconds(2))
+                  .onErrorResume(e -> Mono.just(false))
+            : Mono.just(false);
+
+        return connectedMono.map(connected -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("jwtEnabled", filterEnabled);
+            m.put("authServerUrl", url != null ? url : "");
+            m.put("authServerConnected", connected);
+            return m;
+        });
+    }
+
+    @PostMapping("/auth-toggle")
+    public Mono<ResponseEntity<Map<String, Object>>> toggleAuth() {
+        boolean next = !jwtAuthFilter.isEnabled();
+        jwtAuthFilter.setEnabled(next);
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("jwtEnabled", next);
+        m.put("message", next ? "JWT 인증 활성화됨" : "JWT 인증 비활성화됨");
+        return Mono.just(ResponseEntity.ok(m));
+    }
+
+    @PostMapping("/auth-server-url")
+    public Mono<ResponseEntity<Map<String, Object>>> updateAuthServerUrl(@RequestBody Map<String, String> body) {
+        String url = body.get("url");
+        if (url == null || url.isBlank()) {
+            return Mono.just(ResponseEntity.badRequest().body(Map.of("error", "URL이 비어있습니다.")));
+        }
+        String trimmed = url.trim();
+        return databaseClient.sql("""
+                    INSERT INTO gateway.gateway_setting (key, value)
+                    VALUES ('auth-server-url', :value)
+                    ON CONFLICT (key) DO UPDATE SET value = :value, updated_at = NOW()
+                    """)
+                .bind("value", trimmed)
+                .fetch().rowsUpdated()
+                .doOnSuccess(rows -> jwtAuthFilter.setAuthServerUrl(trimmed))
+                .thenReturn(buildAuthServerUrlResponse(trimmed));
+    }
+
+    private ResponseEntity<Map<String, Object>> buildAuthServerUrlResponse(String url) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("authServerUrl", url);
+        m.put("message", "인증서버 주소가 저장되었습니다.");
+        return ResponseEntity.ok(m);
+    }
+
+    // ─── API 키 기능 ON/OFF ───────────────────────────────────
+
+    @GetMapping("/apikey-status")
+    public Mono<Map<String, Object>> getApiKeyStatus() {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("apiKeyEnabled", apiKeyFilter.isEnabled());
+        return Mono.just(m);
+    }
+
+    @PostMapping("/apikey-toggle")
+    public Mono<ResponseEntity<Map<String, Object>>> toggleApiKey() {
+        boolean next = !apiKeyFilter.isEnabled();
+        apiKeyFilter.setEnabled(next);
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("apiKeyEnabled", next);
+        m.put("message", next ? "API 키 인증 활성화됨" : "API 키 인증 비활성화됨");
+        return Mono.just(ResponseEntity.ok(m));
     }
 
     // ─── 서킷브레이커 이벤트 이력 ────────────────────────────

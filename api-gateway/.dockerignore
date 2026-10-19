@@ -1,0 +1,10 @@
+src/
+.mvn/
+mvnw
+mvnw.cmd
+*.iml
+.idea/
+target/*.original
+target/classes/
+target/generated-sources/
+target/maven-status/

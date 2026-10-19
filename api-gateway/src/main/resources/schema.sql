@@ -118,3 +118,10 @@ CREATE TABLE IF NOT EXISTS gateway.gateway_lifecycle (
     node_name VARCHAR(100),
     event_at  TIMESTAMP    NOT NULL DEFAULT NOW()
 );
+
+-- Gateway 설정 (key-value)
+CREATE TABLE IF NOT EXISTS gateway.gateway_setting (
+    key        VARCHAR(100) PRIMARY KEY,
+    value      TEXT         NOT NULL,
+    updated_at TIMESTAMP    NOT NULL DEFAULT NOW()
+);

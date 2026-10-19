@@ -1,35 +1,62 @@
 services:
   redis:
-    image: redis:7
+    image: redis:8.8.2
     container_name: gateway-redis
     ports:
       - "6379:6379"
+    restart: unless-stopped
 
   postgres:
-    image: postgres:16
+    image: postgres:16.14
     container_name: gateway-postgres
     environment:
       POSTGRES_DB: gatewaydb
       POSTGRES_USER: gateway
-      POSTGRES_PASSWORD: gateway1234
+      POSTGRES_PASSWORD: pine1234!@#$
     ports:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gateway -d gatewaydb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
 
-  prometheus:
-    image: prom/prometheus
-    container_name: prometheus
+  api-gateway:
+    image: api-gateway:20261015
+    build: ./api-gateway
+    container_name: api-gateway
     ports:
-      - "9090:9090"
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - "8080:8080"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      REDIS_HOST: redis
+      SSL_ENABLED: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
 
-  grafana:
-    image: grafana/grafana
-    container_name: grafana
-    ports:
-      - "3000:3000"
+  # prometheus:
+  #   image: prom/prometheus
+  #   container_name: prometheus
+  #   ports:
+  #     - "9090:9090"
+  #   volumes:
+  #     - ./prometheus.yml:/etc/prometheus/prometheus.yml
+  #   restart: unless-stopped
+
+  # grafana:
+  #   image: grafana/grafana
+  #   container_name: grafana
+  #   ports:
+  #     - "3000:3000"
+  #   restart: unless-stopped
 
 volumes:
   postgres_data:

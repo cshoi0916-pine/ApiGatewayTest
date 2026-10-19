@@ -1,5 +1,6 @@
 package com.example.apigateway.filter;
 
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,6 +12,7 @@ import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import io.netty.handler.timeout.ReadTimeoutException;
@@ -53,15 +55,74 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
     );
 
     @Value("${jwt.enabled:true}")
-    private boolean enabled;
+    private volatile boolean enabled;
 
     private final WebClient webClient;
-    private final String authServerUrl;
+    private volatile String authServerUrl;
+    private final DatabaseClient databaseClient;
+
+    public boolean isEnabled() { return enabled; }
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+        log.info("[JWT] 인증 필터 상태 변경: {}", enabled ? "ON" : "OFF");
+        databaseClient.sql("""
+                    INSERT INTO gateway.gateway_setting (key, value)
+                    VALUES ('auth-enabled', :value)
+                    ON CONFLICT (key) DO UPDATE SET value = :value, updated_at = NOW()
+                    """)
+                .bind("value", String.valueOf(enabled))
+                .fetch().rowsUpdated()
+                .subscribe(
+                    r -> log.debug("[JWT] 인증 상태 DB 저장 완료: {}", enabled),
+                    e -> log.warn("[JWT] 인증 상태 DB 저장 실패: {}", e.getMessage())
+                );
+    }
+
+    public String getAuthServerUrl() { return authServerUrl; }
+    public void setAuthServerUrl(String url) {
+        this.authServerUrl = url;
+        log.info("[JWT] 인증서버 주소 변경: {}", url);
+    }
 
     public JwtAuthFilter(WebClient.Builder webClientBuilder,
-                         @Value("${auth.server-url}") String authServerUrl) {
+                         @Value("${auth.server-url}") String authServerUrl,
+                         DatabaseClient databaseClient) {
         this.webClient = webClientBuilder.build();
         this.authServerUrl = authServerUrl;
+        this.databaseClient = databaseClient;
+    }
+
+    @PostConstruct
+    public void loadAuthServerUrlFromDb() {
+        try {
+            String dbUrl = databaseClient
+                .sql("SELECT value FROM gateway.gateway_setting WHERE key = 'auth-server-url'")
+                .map(row -> row.get("value", String.class))
+                .first()
+                .block(Duration.ofSeconds(5));
+            if (dbUrl != null && !dbUrl.isBlank()) {
+                this.authServerUrl = dbUrl;
+                log.info("[JWT] 인증서버 주소 DB 로드: {}", dbUrl);
+            } else {
+                log.info("[JWT] DB에 설정값 없음, application.yml 사용: {}", authServerUrl);
+            }
+        } catch (Exception e) {
+            log.warn("[JWT] DB 로드 실패, application.yml 사용: {} ({})", authServerUrl, e.getMessage());
+        }
+
+        try {
+            String dbEnabled = databaseClient
+                .sql("SELECT value FROM gateway.gateway_setting WHERE key = 'auth-enabled'")
+                .map(row -> row.get("value", String.class))
+                .first()
+                .block(Duration.ofSeconds(5));
+            if (dbEnabled != null) {
+                this.enabled = Boolean.parseBoolean(dbEnabled);
+                log.info("[JWT] 인증 필터 상태 DB 로드: {}", this.enabled ? "ON" : "OFF");
+            }
+        } catch (Exception e) {
+            log.warn("[JWT] 인증 필터 상태 DB 로드 실패, 기본값(ON) 사용: {}", e.getMessage());
+        }
     }
 
     @Override
