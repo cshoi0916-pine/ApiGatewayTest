@@ -9,6 +9,7 @@
 *.jar
 *.war
 *.ear
+*.tar
 
 # Virtual machine crash logs
 hs_err_pid*
