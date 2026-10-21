@@ -27,6 +27,7 @@ public class RouteEntity implements Persistable<String> {
     private Integer stripPrefix;
     private Integer timeoutMs;
     private Integer retryCount;
+    private Boolean apiKeyRequired;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -73,6 +74,9 @@ public class RouteEntity implements Persistable<String> {
 
     public Integer getRetryCount() { return retryCount; }
     public void setRetryCount(Integer retryCount) { this.retryCount = retryCount; }
+
+    public Boolean getApiKeyRequired() { return apiKeyRequired; }
+    public void setApiKeyRequired(Boolean apiKeyRequired) { this.apiKeyRequired = apiKeyRequired; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

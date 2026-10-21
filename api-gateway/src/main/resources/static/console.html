@@ -929,6 +929,16 @@ input.field-error, select.field-error { border-color:#B91C1C !important; }
     </div>
     <div class="form-row">
       <div class="form-group">
+        <label>API 키 인증</label>
+        <div class="toggle-wrap" style="margin-top:8px">
+          <label class="toggle"><input type="checkbox" id="route-api-key-required"><span class="toggle-slider"></span></label>
+          <span style="font-size:13px">이 라우트는 X-API-Key 헤더 필수</span>
+        </div>
+        <div class="form-hint">전역 API 키 기능이 ON일 때만 적용됨</div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
         <label>사용여부</label>
         <div class="toggle-wrap" style="margin-top:8px">
           <label class="toggle"><input type="checkbox" id="route-enabled" checked><span class="toggle-slider"></span></label>
@@ -1752,9 +1762,10 @@ function openRouteModal(existing) {
     document.getElementById('route-path').value     = existing.apiPath || '';
     document.getElementById('route-method').value   = existing.method || 'ALL';
     document.getElementById('route-priority').value    = existing.priority ?? 0;
-    document.getElementById('route-strip-prefix').value = existing.stripPrefix ?? '';
-    document.getElementById('route-timeout-ms').value   = existing.timeoutMs ?? '';
-    document.getElementById('route-retry-count').value  = existing.retryCount ?? '';
+    document.getElementById('route-strip-prefix').value    = existing.stripPrefix ?? '';
+    document.getElementById('route-timeout-ms').value      = existing.timeoutMs ?? '';
+    document.getElementById('route-retry-count').value     = existing.retryCount ?? '';
+    document.getElementById('route-api-key-required').checked = !!existing.apiKeyRequired;
     document.getElementById('route-desc').value         = existing.description || '';
     document.getElementById('route-enabled').checked    = existing.enabled !== false;
     renderConditions(existing.conditions || []);
@@ -1764,9 +1775,10 @@ function openRouteModal(existing) {
     ['route-id','route-name','route-path','route-desc'].forEach(i => document.getElementById(i).value = '');
     document.getElementById('route-method').value       = 'ALL';
     document.getElementById('route-priority').value    = '0';
-    document.getElementById('route-strip-prefix').value = '';
-    document.getElementById('route-timeout-ms').value   = '';
-    document.getElementById('route-retry-count').value  = '';
+    document.getElementById('route-strip-prefix').value       = '';
+    document.getElementById('route-timeout-ms').value         = '';
+    document.getElementById('route-retry-count').value        = '';
+    document.getElementById('route-api-key-required').checked = false;
     document.getElementById('route-enabled').checked   = true;
     document.getElementById('route-service').value  = '';
     document.getElementById('route-service-search').value = '';
@@ -1857,6 +1869,7 @@ async function submitRoute() {
     stripPrefix:     (() => { const v = document.getElementById('route-strip-prefix').value.trim(); return v !== '' ? parseInt(v) : null; })(),
     timeoutMs:       (() => { const v = document.getElementById('route-timeout-ms').value.trim(); return v !== '' ? parseInt(v) : null; })(),
     retryCount:      (() => { const v = document.getElementById('route-retry-count').value.trim(); return v !== '' ? parseInt(v) : 0; })(),
+    apiKeyRequired:  document.getElementById('route-api-key-required').checked,
     description:      document.getElementById('route-desc').value.trim(),
     enabled:          document.getElementById('route-enabled').checked,
     routeType:       'MANUAL',

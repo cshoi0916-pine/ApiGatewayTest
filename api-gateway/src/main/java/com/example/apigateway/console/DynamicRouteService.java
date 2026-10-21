@@ -92,6 +92,7 @@ public class DynamicRouteService implements ApplicationEventPublisherAware {
         entity.setStripPrefix(request.getStripPrefix());
         entity.setTimeoutMs(request.getTimeoutMs());
         entity.setRetryCount(request.getRetryCount());
+        entity.setApiKeyRequired(Boolean.TRUE.equals(request.getApiKeyRequired()));
         entity.setCreatedAt(LocalDateTime.now());
         entity.setUpdatedAt(LocalDateTime.now());
 
@@ -127,6 +128,7 @@ public class DynamicRouteService implements ApplicationEventPublisherAware {
                 entity.setStripPrefix(request.getStripPrefix());
                 entity.setTimeoutMs(request.getTimeoutMs());
                 entity.setRetryCount(request.getRetryCount());
+                entity.setApiKeyRequired(Boolean.TRUE.equals(request.getApiKeyRequired()));
                 entity.setUpdatedAt(LocalDateTime.now());
                 return routeRepository.save(entity);
             })
@@ -212,15 +214,7 @@ public class DynamicRouteService implements ApplicationEventPublisherAware {
         def.setPredicates(predicates);
 
         List<FilterDefinition> filters = new ArrayList<>();
-        int stripCount;
-        if (entity.getStripPrefix() != null) {
-            stripCount = entity.getStripPrefix();
-        } else {
-            stripCount = (int) java.util.Arrays.stream(entity.getApiPath().split("/"))
-                    .filter(s -> !s.isEmpty() && !s.contains("*"))
-                    .count();
-            stripCount = Math.max(1, stripCount);
-        }
+        int stripCount = entity.getStripPrefix() != null ? entity.getStripPrefix() : 0;
         filters.add(new FilterDefinition("StripPrefix=" + stripCount));
 
         // 재시도 필터 (retryCount > 0 인 경우에만 추가)
@@ -239,9 +233,11 @@ public class DynamicRouteService implements ApplicationEventPublisherAware {
 
         def.setFilters(filters);
 
-        // 타임아웃 설정 (null 이면 전역값 사용)
         if (entity.getTimeoutMs() != null) {
             def.getMetadata().put("response-timeout", entity.getTimeoutMs().longValue());
+        }
+        if (Boolean.TRUE.equals(entity.getApiKeyRequired())) {
+            def.getMetadata().put("api-key-required", true);
         }
 
         def.setOrder(entity.getPriority() != null ? entity.getPriority() : 0);

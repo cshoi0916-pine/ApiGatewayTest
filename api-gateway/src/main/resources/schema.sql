@@ -52,8 +52,9 @@ CREATE TABLE IF NOT EXISTS gateway.gateway_route (
 );
 
 -- 타임아웃/재시도 컬럼 (기존 테이블에 없으면 추가)
-ALTER TABLE gateway.gateway_route ADD COLUMN IF NOT EXISTS timeout_ms   INTEGER;
-ALTER TABLE gateway.gateway_route ADD COLUMN IF NOT EXISTS retry_count  INTEGER DEFAULT 0;
+ALTER TABLE gateway.gateway_route ADD COLUMN IF NOT EXISTS timeout_ms       INTEGER;
+ALTER TABLE gateway.gateway_route ADD COLUMN IF NOT EXISTS retry_count     INTEGER DEFAULT 0;
+ALTER TABLE gateway.gateway_route ADD COLUMN IF NOT EXISTS api_key_required BOOLEAN NOT NULL DEFAULT FALSE;
 
 -- Route Condition
 CREATE TABLE IF NOT EXISTS gateway.route_condition (

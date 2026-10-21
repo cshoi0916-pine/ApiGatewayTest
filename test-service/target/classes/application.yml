@@ -11,6 +11,6 @@ pine-gw:
   service-id: test-service     # 콘솔에서 보일 서비스 ID
   host: 127.0.0.1              # 게이트웨이가 이 서비스에 접근할 IP
   route:
-    path: /test-dynamic/**             # 이 경로로 오는 요청을 test-service로 라우팅
+    path: /test-service/**             # 이 경로로 오는 요청을 test-service로 라우팅
     method: ALL
     priority: 0

@@ -16,6 +16,7 @@ public class RouteRequest {
     private Integer stripPrefix;
     private Integer timeoutMs;
     private Integer retryCount;
+    private Boolean apiKeyRequired;
     private List<ConditionRequest> conditions;
 
     public static class ConditionRequest {
@@ -60,6 +61,8 @@ public class RouteRequest {
     public void setTimeoutMs(Integer timeoutMs) { this.timeoutMs = timeoutMs; }
     public Integer getRetryCount() { return retryCount; }
     public void setRetryCount(Integer retryCount) { this.retryCount = retryCount; }
+    public Boolean getApiKeyRequired() { return apiKeyRequired; }
+    public void setApiKeyRequired(Boolean apiKeyRequired) { this.apiKeyRequired = apiKeyRequired; }
     public List<ConditionRequest> getConditions() { return conditions; }
     public void setConditions(List<ConditionRequest> conditions) { this.conditions = conditions; }
 

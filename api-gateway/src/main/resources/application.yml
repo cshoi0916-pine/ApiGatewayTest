@@ -32,8 +32,8 @@ spring:
 
   sql:
     init:
-      mode: never
-#     mode: always
+      mode: always
+#      mode: never
 
 logging:
   level:
@@ -77,11 +77,6 @@ circuit-breaker:
   failure-threshold: 5      # 윈도우 내 실패 N건 이상 시 OPEN
   open-duration-ms: 30000   # OPEN 유지 시간 (ms), 이후 HALF-OPEN
 
-api-key:
-  # 실제배포
-#  enabled: true
-  # 테스트
-  enabled: false
 
 jwt:
   enabled: true
