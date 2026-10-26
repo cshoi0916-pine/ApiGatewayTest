@@ -100,8 +100,9 @@ CREATE TABLE IF NOT EXISTS gateway.ip_blacklist (
 ALTER TABLE gateway.ip_blacklist ADD COLUMN IF NOT EXISTS expired_at TIMESTAMP NULL;
 ALTER TABLE gateway.ip_blacklist ADD COLUMN IF NOT EXISTS auto BOOLEAN NOT NULL DEFAULT FALSE;
 
--- API 키 만료일
-ALTER TABLE gateway.api_client ADD COLUMN IF NOT EXISTS expired_at TIMESTAMP;
+-- API 키 만료일 / 접근 허용 라우트
+ALTER TABLE gateway.api_client ADD COLUMN IF NOT EXISTS expired_at         TIMESTAMP;
+ALTER TABLE gateway.api_client ADD COLUMN IF NOT EXISTS allowed_route_ids  TEXT NOT NULL DEFAULT '';
 
 -- 서킷브레이커 이벤트 이력
 CREATE TABLE IF NOT EXISTS gateway.circuit_event (

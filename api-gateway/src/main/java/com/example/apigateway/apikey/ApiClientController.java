@@ -27,13 +27,16 @@ public class ApiClientController {
     @PostMapping
     public Mono<ApiClient> issue(@RequestBody Map<String, String> body) {
         String clientName = body.getOrDefault("clientName", "unknown");
-        return apiKeyService.issueKey(clientName, parseDateTime(body.get("expiredAt")));
+        String allowedRouteIds = body.getOrDefault("allowedRouteIds", "");
+        return apiKeyService.issueKey(clientName, parseDateTime(body.get("expiredAt")), allowedRouteIds);
     }
 
-    @PutMapping("/{id}/expiry")
-    public Mono<ResponseEntity<ApiClient>> setExpiry(@PathVariable Long id,
-                                                     @RequestBody Map<String, String> body) {
-        return apiKeyService.setExpiry(id, parseDateTime(body.get("expiredAt")))
+    @PutMapping("/{id}")
+    public Mono<ResponseEntity<ApiClient>> updateClient(@PathVariable Long id,
+                                                        @RequestBody Map<String, String> body) {
+        return apiKeyService.updateClient(id,
+                        parseDateTime(body.get("expiredAt")),
+                        body.get("allowedRouteIds"))
                 .map(ResponseEntity::ok);
     }
 

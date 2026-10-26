@@ -579,6 +579,7 @@ input.field-error, select.field-error { border-color:#B91C1C !important; }
               <th class="col-num">#</th>
               <th>클라이언트명</th>
               <th>API 키</th>
+              <th>허용 라우트</th>
               <th>생성일</th>
               <th>만료일</th>
               <th>상태</th>
@@ -977,10 +978,20 @@ input.field-error, select.field-error { border-color:#B91C1C !important; }
   </div>
 </div>
 
-<!-- 만료일 설정 모달 -->
+<!-- API 키 수정 모달 -->
 <div class="modal-overlay" id="expiry-modal">
-  <div class="modal" style="width:360px">
-    <h3>만료일 설정</h3>
+  <div class="modal" style="width:420px">
+    <h3>API 키 수정</h3>
+    <div class="form-group">
+      <label>접근 허용 라우트</label>
+      <div id="expiry-route-tags" style="display:flex;flex-wrap:wrap;gap:4px;min-height:32px;margin-bottom:6px"></div>
+      <div style="position:relative">
+        <input id="expiry-route-search" placeholder="라우트 검색..." autocomplete="off"
+          style="width:100%" oninput="filterExpiryRoutes(this.value)" onfocus="showExpiryDropdown()" onblur="hideExpiryDropdown()">
+        <div id="expiry-route-dropdown" style="display:none;position:absolute;top:calc(100% + 2px);left:0;right:0;z-index:9999;background:#fff;color:#1E293B;border:1px solid #CBD5E1;border-radius:6px;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.18)"></div>
+      </div>
+      <div class="form-hint">선택 안 하면 API 키 인증이 켜진 모든 라우트에 접근 가능</div>
+    </div>
     <div class="form-group">
       <label>만료일시</label>
       <input type="datetime-local" id="expiry-input" style="width:100%">
@@ -1001,6 +1012,16 @@ input.field-error, select.field-error { border-color:#B91C1C !important; }
       <div class="form-group">
         <label>클라이언트명 *</label>
         <input id="apikey-client-name" placeholder="예: mobile-app, third-party-service" onkeydown="if(event.key==='Enter')issueApiKey()">
+      </div>
+      <div class="form-group">
+        <label>접근 허용 라우트 (선택)</label>
+        <div id="apikey-route-tags" style="display:flex;flex-wrap:wrap;gap:4px;min-height:32px;margin-bottom:6px"></div>
+        <div style="position:relative">
+          <input id="apikey-route-search" placeholder="라우트 검색..." autocomplete="off"
+            style="width:100%" oninput="filterIssuRoutes(this.value)" onfocus="showIssuDropdown()" onblur="hideIssuDropdown()">
+          <div id="apikey-route-dropdown" style="display:none;position:absolute;top:calc(100% + 2px);left:0;right:0;z-index:9999;background:#fff;color:#1E293B;border:1px solid #CBD5E1;border-radius:6px;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.18)"></div>
+        </div>
+        <div class="form-hint">선택 안 하면 API 키 인증이 켜진 모든 라우트에 접근 가능</div>
       </div>
       <div class="form-group">
         <label>만료일 (선택)</label>
@@ -2153,8 +2174,9 @@ function renderApiKeys() {
       <td class="col-num">${idx + 1}</td>
       <td>${k.clientName || '-'}</td>
       <td><code style="font-size:12px">${masked}</code></td>
+      <td style="font-size:12px;color:#64748B">${k.allowedRouteIds && k.allowedRouteIds !== '' ? k.allowedRouteIds.split(',').map(id=>`<code style="font-size:10px;background:var(--surface2);padding:1px 4px;border-radius:3px">${id.trim()}</code>`).join(' ') : '<span style="color:#94A3B8">전체</span>'}</td>
       <td style="font-size:12px;color:#64748B">${time}</td>
-      <td>${expiryHtml}<br><button class="btn btn-secondary btn-sm" style="margin-top:4px;font-size:10px" onclick="openSetExpiryModal(${k.id})">설정</button></td>
+      <td>${expiryHtml}<br><button class="btn btn-secondary btn-sm" style="margin-top:4px;font-size:10px" onclick="openSetExpiryModal(${k.id})">수정</button></td>
       <td>${toggleBtn}</td>
       <td>
         <button class="btn btn-danger" style="padding:3px 10px;font-size:12px"
@@ -2164,14 +2186,56 @@ function renderApiKeys() {
   }).join('');
 }
 
-function openApiKeyModal() {
+// ── 발급 모달 라우트 선택 ──────────────────────────────
+let _issuSelectedIds = [];
+let _issuAllRoutes = [];
+
+function filterIssuRoutes(q) {
+  const dd = document.getElementById('apikey-route-dropdown');
+  const filtered = q ? _issuAllRoutes.filter(r =>
+    (r.name||'').toLowerCase().includes(q.toLowerCase()) ||
+    (r.id||'').toLowerCase().includes(q.toLowerCase()) ||
+    (r.apiPath||'').toLowerCase().includes(q.toLowerCase())
+  ) : _issuAllRoutes;
+  dd.innerHTML = buildDropdownHtml(filtered, _issuSelectedIds, 'addIssuRoute');
+}
+function showIssuDropdown() {
+  filterIssuRoutes(document.getElementById('apikey-route-search').value);
+  document.getElementById('apikey-route-dropdown').style.display = 'block';
+}
+function hideIssuDropdown() {
+  setTimeout(() => { document.getElementById('apikey-route-dropdown').style.display = 'none'; }, 150);
+}
+function addIssuRoute(id) {
+  if (_issuSelectedIds.includes(id)) {
+    _issuSelectedIds = _issuSelectedIds.filter(x => x !== id);
+  } else {
+    _issuSelectedIds.push(id);
+  }
+  renderRouteTags(document.getElementById('apikey-route-tags'), _issuSelectedIds, 'removeIssuRoute');
+  filterIssuRoutes(document.getElementById('apikey-route-search').value);
+}
+function removeIssuRoute(id) {
+  _issuSelectedIds = _issuSelectedIds.filter(x => x !== id);
+  renderRouteTags(document.getElementById('apikey-route-tags'), _issuSelectedIds, 'removeIssuRoute');
+  filterIssuRoutes(document.getElementById('apikey-route-search').value);
+}
+
+async function openApiKeyModal() {
   document.getElementById('apikey-client-name').value = '';
   document.getElementById('apikey-expired-at').value = '';
+  _issuSelectedIds = [];
+  document.getElementById('apikey-route-tags').innerHTML = '';
+  document.getElementById('apikey-route-search').value = '';
+  document.getElementById('apikey-route-dropdown').style.display = 'none';
   document.getElementById('apikey-error').style.display = 'none';
   document.getElementById('apikey-form-step').style.display = 'block';
   document.getElementById('apikey-result-step').style.display = 'none';
   document.getElementById('apikey-modal-title').textContent = 'API 키 발급';
   document.getElementById('apikey-modal').classList.add('active');
+  try {
+    _issuAllRoutes = await getApiKeyRoutes();
+  } catch(e) {}
 }
 
 async function issueApiKey() {
@@ -2185,6 +2249,7 @@ async function issueApiKey() {
     return;
   }
   const body = { clientName };
+  if (_issuSelectedIds.length > 0) body.allowedRouteIds = _issuSelectedIds.join(',');
   if (expiredAtRaw) body.expiredAt = expiredAtRaw;
   try {
     const r = await fetch(`${API}/apikeys`, {
@@ -2237,25 +2302,105 @@ async function toggleApiKey(id, currentEnabled) {
   } catch(e) { toast('변경 실패', 'error'); }
 }
 
-// ── API 키 만료일 설정 ──────────────────────────────────
+// ── API 키 수정 ──────────────────────────────────
 let setExpiryTargetId = null;
 
-function openSetExpiryModal(id) {
+// ── 라우트 태그 선택 공통 로직 ──────────────────────────
+let _routeCache = null;
+async function getApiKeyRoutes() {
+  const routes = await (await fetch(`${API}/routes`)).json();
+  _routeCache = routes.filter(r => r.enabled !== false && r.apiKeyRequired);
+  return _routeCache;
+}
+
+function renderRouteTags(tagsEl, selectedIds, onRemove) {
+  tagsEl.innerHTML = selectedIds.map(id => {
+    const route = (_routeCache || []).find(r => r.id === id);
+    const label = route ? (route.name || route.id) : id;
+    return `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--primary);color:#fff;font-size:12px;padding:2px 8px;border-radius:12px">
+      ${label}
+      <span style="cursor:pointer;font-size:14px;line-height:1" onmousedown="event.preventDefault();${onRemove}('${id}')">×</span>
+    </span>`;
+  }).join('');
+}
+
+function buildDropdownHtml(routes, selectedIds, onSelect) {
+  if (!routes.length) return '<div style="padding:8px 12px;color:#94A3B8;font-size:13px">라우트 없음</div>';
+  return routes.map(r => {
+    const selected = selectedIds.includes(r.id);
+    const bg = selected ? '#EFF6FF' : 'transparent';
+    const check = selected ? `<span style="color:#0EA5E9;font-weight:700;margin-right:6px">✓</span>` : `<span style="display:inline-block;width:16px;margin-right:6px"></span>`;
+    return `<div style="padding:8px 12px;cursor:pointer;font-size:13px;color:#1E293B;background:${bg};display:flex;align-items:center"
+      onmousedown="event.preventDefault();${onSelect}('${r.id}')"
+      onmouseover="this.style.background='${selected ? '#DBEAFE' : '#F1F5F9'}'" onmouseout="this.style.background='${bg}'">
+      ${check}<b>${r.name || r.id}</b>&nbsp;<span style="color:#64748B;font-size:11px">${r.apiPath || ''}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── 수정 모달 라우트 선택 ──────────────────────────────
+let _expirySelectedIds = [];
+let _expiryAllRoutes = [];
+
+function filterExpiryRoutes(q) {
+  const dd = document.getElementById('expiry-route-dropdown');
+  const filtered = q ? _expiryAllRoutes.filter(r =>
+    (r.name||'').toLowerCase().includes(q.toLowerCase()) ||
+    (r.id||'').toLowerCase().includes(q.toLowerCase()) ||
+    (r.apiPath||'').toLowerCase().includes(q.toLowerCase())
+  ) : _expiryAllRoutes;
+  dd.innerHTML = buildDropdownHtml(filtered, _expirySelectedIds, 'addExpiryRoute');
+}
+function showExpiryDropdown() {
+  filterExpiryRoutes(document.getElementById('expiry-route-search').value);
+  document.getElementById('expiry-route-dropdown').style.display = 'block';
+}
+function hideExpiryDropdown() {
+  setTimeout(() => { document.getElementById('expiry-route-dropdown').style.display = 'none'; }, 150);
+}
+function addExpiryRoute(id) {
+  if (_expirySelectedIds.includes(id)) {
+    _expirySelectedIds = _expirySelectedIds.filter(x => x !== id);
+  } else {
+    _expirySelectedIds.push(id);
+  }
+  renderRouteTags(document.getElementById('expiry-route-tags'), _expirySelectedIds, 'removeExpiryRoute');
+  filterExpiryRoutes(document.getElementById('expiry-route-search').value);
+}
+function removeExpiryRoute(id) {
+  _expirySelectedIds = _expirySelectedIds.filter(x => x !== id);
+  renderRouteTags(document.getElementById('expiry-route-tags'), _expirySelectedIds, 'removeExpiryRoute');
+  filterExpiryRoutes(document.getElementById('expiry-route-search').value);
+}
+
+async function openSetExpiryModal(id) {
   setExpiryTargetId = id;
-  document.getElementById('expiry-input').value = '';
+  const key = (allApiKeys || []).find(k => k.id === id) || {};
+  document.getElementById('expiry-input').value = key.expiredAt ? key.expiredAt.substring(0, 16) : '';
+  _expirySelectedIds = key.allowedRouteIds ? key.allowedRouteIds.split(',').map(s => s.trim()).filter(Boolean) : [];
+  document.getElementById('expiry-route-tags').innerHTML = '';
+  document.getElementById('expiry-route-dropdown').style.display = 'none';
+  document.getElementById('expiry-route-search').value = '';
   document.getElementById('expiry-modal').classList.add('active');
+  try {
+    _expiryAllRoutes = await getApiKeyRoutes();
+    renderRouteTags(document.getElementById('expiry-route-tags'), _expirySelectedIds, 'removeExpiryRoute');
+  } catch(e) {}
 }
 
 async function submitSetExpiry() {
   const val = document.getElementById('expiry-input').value;
   try {
-    await fetch(`${API}/apikeys/${setExpiryTargetId}/expiry`, {
+    await fetch(`${API}/apikeys/${setExpiryTargetId}`, {
       method: 'PUT',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ expiredAt: val || null })
+      body: JSON.stringify({
+        expiredAt: val || null,
+        allowedRouteIds: _expirySelectedIds.join(',')
+      })
     });
     closeModal('expiry-modal');
-    toast('만료일이 설정됐습니다', 'success');
+    toast('수정됐습니다', 'success');
     await loadApiKeys();
   } catch(e) { toast('설정 실패', 'error'); }
 }

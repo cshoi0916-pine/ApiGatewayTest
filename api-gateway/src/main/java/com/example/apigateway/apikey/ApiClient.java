@@ -15,6 +15,7 @@ public class ApiClient {
     private LocalDateTime createdAt;
     private LocalDateTime expiredAt;
     private boolean enabled;
+    private String allowedRouteIds; // 쉼표 구분 라우트 ID 목록 (예: "route1,route2"). 비어있으면 전체 허용
 
     public Long getId() { return id; }
     public String getClientName() { return clientName; }
@@ -22,6 +23,7 @@ public class ApiClient {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getExpiredAt() { return expiredAt; }
     public boolean isEnabled() { return enabled; }
+    public String getAllowedRouteIds() { return allowedRouteIds != null ? allowedRouteIds : ""; }
 
     public void setId(Long id) { this.id = id; }
     public void setClientName(String clientName) { this.clientName = clientName; }
@@ -29,4 +31,5 @@ public class ApiClient {
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public void setExpiredAt(LocalDateTime expiredAt) { this.expiredAt = expiredAt; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
+    public void setAllowedRouteIds(String allowedRouteIds) { this.allowedRouteIds = allowedRouteIds; }
 }

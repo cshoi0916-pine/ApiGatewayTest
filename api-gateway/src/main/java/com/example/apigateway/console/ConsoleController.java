@@ -184,6 +184,7 @@ public class ConsoleController {
                     m.put("stripPrefix", entity.getStripPrefix());
                     m.put("timeoutMs", entity.getTimeoutMs());
                     m.put("retryCount", entity.getRetryCount());
+                    m.put("apiKeyRequired", entity.getApiKeyRequired());
                     m.put("enabled", entity.getEnabled());
                     m.put("createdAt", entity.getCreatedAt());
                     m.put("conditions", conditions.stream().map(c -> {

@@ -4,7 +4,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5433/gatewaydb
     username: gateway
-    password: gateway1234
+    password: pine1234!@#$
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:

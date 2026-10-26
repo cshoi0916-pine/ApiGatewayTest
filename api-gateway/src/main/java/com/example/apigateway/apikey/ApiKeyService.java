@@ -23,20 +23,28 @@ ApiKeyService {
                 .defaultIfEmpty(false);
     }
 
-    public Mono<ApiClient> issueKey(String clientName, LocalDateTime expiredAt) {
+    public Mono<ApiClient> findValidClient(String apiKey) {
+        return repo.findValidByApiKey(apiKey);
+    }
+
+    public Mono<ApiClient> issueKey(String clientName, LocalDateTime expiredAt, String allowedRouteIds) {
         ApiClient client = new ApiClient();
         client.setClientName(clientName);
         client.setApiKey(UUID.randomUUID().toString().replace("-", ""));
         client.setCreatedAt(LocalDateTime.now());
         client.setExpiredAt(expiredAt);
         client.setEnabled(true);
+        client.setAllowedRouteIds(allowedRouteIds != null ? allowedRouteIds.trim() : "");
         return repo.save(client);
     }
 
-    public Mono<ApiClient> setExpiry(Long id, LocalDateTime expiredAt) {
+    public Mono<ApiClient> updateClient(Long id, LocalDateTime expiredAt, String allowedRouteIds) {
         return repo.findById(id)
                 .flatMap(c -> {
                     c.setExpiredAt(expiredAt);
+                    if (allowedRouteIds != null) {
+                        c.setAllowedRouteIds(allowedRouteIds.trim());
+                    }
                     return repo.save(c);
                 });
     }

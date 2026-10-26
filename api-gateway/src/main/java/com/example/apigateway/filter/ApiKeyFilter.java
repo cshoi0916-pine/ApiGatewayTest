@@ -92,16 +92,29 @@ public class ApiKeyFilter implements GlobalFilter, Ordered {
             return exchange.getResponse().setComplete();
         }
 
-        return apiKeyService.isValidKey(apiKey)
-                .flatMap(valid -> {
-                    if (!valid) {
-                        log.warn("[API-KEY] 유효하지 않은 키 path={}", path);
-                        exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-                        return exchange.getResponse().setComplete();
+        String routeId = route != null ? route.getId() : null;
+
+        return apiKeyService.findValidClient(apiKey)
+                .flatMap(client -> {
+                    String allowedRouteIds = client.getAllowedRouteIds();
+                    if (allowedRouteIds != null && !allowedRouteIds.isBlank()) {
+                        boolean routeAllowed = java.util.Arrays.stream(allowedRouteIds.split(","))
+                                .map(String::trim).anyMatch(id -> id.equals(routeId));
+                        if (!routeAllowed) {
+                            log.warn("[API-KEY] 라우트 접근 불가 client={} routeId={} allowed={} path={}",
+                                    client.getClientName(), routeId, allowedRouteIds, path);
+                            exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+                            return exchange.getResponse().setComplete();
+                        }
                     }
                     exchange.getAttributes().put("AUTHENTICATED_BY_API_KEY", true);
                     return chain.filter(exchange);
-                });
+                })
+                .switchIfEmpty(Mono.defer(() -> {
+                    log.warn("[API-KEY] 유효하지 않은 키 path={}", path);
+                    exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                    return exchange.getResponse().setComplete();
+                }));
     }
 
     @Override
