@@ -16,9 +16,13 @@ spring:
       server:
         webflux:
           routes: []   # 라우트는 DB에서 로드
+          observability:
+            enabled: true   # SCG 4.x 메트릭 (routeId별 요청수·응답시간·오류율 등)
       httpclient:
         response-timeout: 5000ms   # 전역 응답 타임아웃 (라우트별 timeout_ms로 개별 오버라이드 가능)
         connect-timeout: 3000      # 전역 연결 타임아웃 (ms)
+        pool:
+          metrics: true   # Netty 커넥션 풀 메트릭 (백엔드 연결 활성/대기 수)
 
   data:
     redis:
@@ -40,13 +44,19 @@ logging:
     com.example.apigateway.filter.SimpleCircuitBreakerFilter: DEBUG
 
 management:
+  server:
+    port: ${MANAGEMENT_PORT:9999}   # Prometheus 전용 포트 (8080 본체와 분리)
   endpoints:
     web:
       exposure:
-        include: "*"
+        include: "health,prometheus,info"
   endpoint:
     health:
       show-details: always
+  metrics:
+    distribution:
+      percentiles-histogram:
+        spring.cloud.gateway.requests: true   # _bucket 생성 → histogram_quantile(p95 등) 사용 가능
 
 gateway:
   name: DH-APIGW

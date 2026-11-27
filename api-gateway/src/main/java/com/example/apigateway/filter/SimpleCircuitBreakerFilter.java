@@ -4,6 +4,8 @@ import com.example.apigateway.exception.GatewayServiceException;
 import com.example.apigateway.registry.ServiceRegistryService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,7 +44,10 @@ public class SimpleCircuitBreakerFilter implements GlobalFilter, Ordered {
 
     private final ServiceRegistryService registryService;
     private final CircuitEventRepository eventRepository;
+    private final MeterRegistry meterRegistry;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    private final Set<String> registeredServices = ConcurrentHashMap.newKeySet();
 
     @Value("${circuit-breaker.failure-threshold:5}")
     private int failureThreshold;
@@ -54,9 +59,32 @@ public class SimpleCircuitBreakerFilter implements GlobalFilter, Ordered {
     private int windowSize;
 
     public SimpleCircuitBreakerFilter(ServiceRegistryService registryService,
-                                       CircuitEventRepository eventRepository) {
+                                       CircuitEventRepository eventRepository,
+                                       MeterRegistry meterRegistry) {
         this.registryService = registryService;
         this.eventRepository = eventRepository;
+        this.meterRegistry = meterRegistry;
+    }
+
+    private void ensureMetricsRegistered(String serviceId) {
+        if (registeredServices.add(serviceId)) {
+            Gauge.builder("custom_circuit_breaker_state", this, filter -> {
+                Long openTime = filter.openedAt.get(serviceId);
+                if (openTime == null) return 0.0;                              // CLOSED
+                boolean isForced = filter.forcedOpen.contains(serviceId);
+                long elapsed = System.currentTimeMillis() - openTime;
+                if (isForced || elapsed < filter.openDurationMs) return 1.0;   // OPEN
+                return 2.0;                                                     // HALF_OPEN
+            })
+            .tag("service_id", serviceId)
+            .description("Circuit Breaker state: 0=CLOSED 1=OPEN 2=HALF_OPEN")
+            .register(meterRegistry);
+        }
+    }
+
+    private void countCall(String serviceId, String result) {
+        meterRegistry.counter("custom_circuit_breaker_calls_total",
+                "service_id", serviceId, "result", result).increment();
     }
 
     private void saveEvent(String serviceId, String event, String detail) {
@@ -76,6 +104,7 @@ public class SimpleCircuitBreakerFilter implements GlobalFilter, Ordered {
         if (!"lb".equals(uri.getScheme())) return chain.filter(exchange);
 
         String serviceId = uri.getHost();
+        ensureMetricsRegistered(serviceId);
 
         Long openTime = openedAt.get(serviceId);
         if (openTime != null) {
@@ -85,11 +114,13 @@ public class SimpleCircuitBreakerFilter implements GlobalFilter, Ordered {
             if (isForced || elapsed < openDurationMs) {
                 long retryAfter = isForced ? -1 : (openDurationMs - elapsed) / 1000;
                 log.debug("[CircuitBreaker] OPEN 거부: serviceId={} forced={}", serviceId, isForced);
+                countCall(serviceId, "rejected");
                 return writeCircuitOpenResponse(exchange, serviceId, retryAfter);
             }
 
             if (!halfOpenTesting.add(serviceId)) {
                 log.debug("[CircuitBreaker] HALF-OPEN 테스트 진행 중, 거부: {}", serviceId);
+                countCall(serviceId, "rejected");
                 return writeCircuitOpenResponse(exchange, serviceId, 0);
             }
             log.info("[CircuitBreaker] HALF-OPEN 테스트 시작: {}", serviceId);
@@ -108,6 +139,7 @@ public class SimpleCircuitBreakerFilter implements GlobalFilter, Ordered {
                         openedAt.put(serviceId, System.currentTimeMillis());
                         log.warn("[CircuitBreaker] HALF-OPEN 테스트 실패, 재OPEN: {}", serviceId);
                     }
+                    countCall(serviceId, "failure");
                     checkAndTrip(serviceId, false);
                 } else {
                     halfOpenTesting.remove(serviceId);
@@ -119,6 +151,7 @@ public class SimpleCircuitBreakerFilter implements GlobalFilter, Ordered {
                     } else {
                         recordResult(serviceId, true);
                     }
+                    countCall(serviceId, "success");
                 }
             }))
             .doOnError(e -> {
@@ -129,6 +162,7 @@ public class SimpleCircuitBreakerFilter implements GlobalFilter, Ordered {
                         openedAt.put(serviceId, System.currentTimeMillis());
                         log.warn("[CircuitBreaker] HALF-OPEN 테스트 실패(연결 에러), 재OPEN: {}", serviceId);
                     }
+                    countCall(serviceId, "failure");
                     registryService.evictCache(serviceId).subscribe();
                     checkAndTrip(serviceId, false);
                 }
